@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Product Listing Page</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet"/>
+    
+    <!-- Firebase & EmailJS -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4CAF50",
+                        "background-light": "#F4F4F4",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+        
+        input[type="checkbox"] {
+            --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27white%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        
+        .menu-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Toast Styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-in-out;
+            max-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background-color: #10B981;
+        }
+
+        .toast.error {
+            background-color: #EF4444;
+        }
+
+        .toast.warning {
+            background-color: #F59E0B;
+        }
+        
+        /* Price Range Slider */
+        .slider-track {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+        }
+        
+        .slider-range {
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 3px;
+            position: absolute;
+        }
+        
+        .slider-thumb {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 2px solid #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+            position: absolute;
+            top: -7px;
+        }
+    </style>
+  
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#333333] dark:text-gray-200">
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="menu-overlay fixed inset-0 bg-black/50 z-40 lg:hidden" id="menuOverlay"></div>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-xl z-50 p-6 lg:hidden" id="mobileMenu">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-bold">Menu</h2>
+            <button class="text-2xl" id="closeMenuBtn">×</button>
+        </div>
+        <nav class="space-y-4">
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+            <a class="block text-lg font-medium text-primary transition-colors py-2" href="products.html">Shop</a>
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#">Deals</a>
+        </nav>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex gap-2">
+                <button class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='profile.html'">
+                    <span class="material-symbols-outlined">person</span>
+                </button>
+                <button class="relative flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='cart.html'">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <div class="cart-count absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">0</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+        <header class="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm font-display">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-700 py-4">
+                    <div class="flex items-center gap-8">
+                        <!-- Mobile Menu Button -->
+                        <button class="lg:hidden text-2xl" id="menuBtn">☰</button>
+                        
+                        <div class="flex items-center gap-3 text-primary">
+                            <h2 class="text-gray-800 dark:text-white text-xl font-bold tracking-tight">Grocery Go</h2>
+                        </div>
+                        <nav class="hidden md:flex items-center gap-8">
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="index.html">Home</a>
+                            <a class="text-primary dark:text-primary text-sm font-bold" href="products.html">Shop</a>
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="#">Deals</a>
+                        </nav>
+                    </div>
+                    <div class="flex flex-1 justify-end items-center gap-4">
+                        <label class="hidden lg:flex flex-col min-w-40 !h-10 max-w-sm w-full">
+                            <div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+                                <div class="text-gray-500 flex bg-gray-100 dark:bg-gray-800 items-center justify-center pl-3 rounded-l-lg">
+                                    <span class="material-symbols-outlined">search</span>
+                                </div>
+                                <input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-gray-800 dark:text-gray-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border-none bg-gray-100 dark:bg-gray-800 h-full placeholder:text-gray-500 dark:placeholder:text-gray-400 pl-2 text-sm font-normal" placeholder="Search for products..." id="searchInput"/>
+                            </div>
+                        </label>
+                        <div class="flex gap-2">
+                            <button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='profile.html'">
+                                <span class="material-symbols-outlined">person</span>
+                            </button>
+                            <button class="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='cart.html'">
+                                <span class="material-symbols-outlined">shopping_cart</span>
+                                <div class="cart-count absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">0</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside class="lg:col-span-1 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm h-fit">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Filters</h3>
+                        <button class="text-sm text-primary hover:underline font-medium" id="clearAllFilters">Clear All</button>
+                    </div>
+                    <div class="flex flex-col divide-y divide-gray-200 dark:divide-gray-700">
+                        <details class="py-3 group" open>
+                            <summary class="flex cursor-pointer items-center justify-between gap-4 py-2 list-none">
+                                <p class="text-gray-800 dark:text-gray-200 font-semibold">Category</p>
+                                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="pt-2">
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="category-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Leafy Greens" checked/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Leafy Greens</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="category-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Root Vegetables"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Root Vegetables</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="category-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Cruciferous"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Cruciferous</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="category-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Nightshades"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Nightshades</p>
+                                </label>
+                            </div>
+                        </details>
+                        <details class="py-3 group" open>
+                            <summary class="flex cursor-pointer items-center justify-between gap-4 py-2 list-none">
+                                <p class="text-gray-800 dark:text-gray-200 font-semibold">Price</p>
+                                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="relative w-full pt-6 pb-4">
+                                <div class="slider-track" id="priceSlider">
+                                    <div class="slider-range" id="priceRange"></div>
+                                    <div class="slider-thumb" id="minThumb"></div>
+                                    <div class="slider-thumb" id="maxThumb"></div>
+                                </div>
+                                <div class="flex justify-between mt-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <span id="minPrice">$5</span>
+                                    <span id="maxPrice">$50</span>
+                                </div>
+                            </div>
+                        </details>
+                        <details class="py-3 group">
+                            <summary class="flex cursor-pointer items-center justify-between gap-4 py-2 list-none">
+                                <p class="text-gray-800 dark:text-gray-200 font-semibold">Brand</p>
+                                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="pt-2">
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="brand-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Organic Farms"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Organic Farms</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="brand-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Fresh Harvest"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Fresh Harvest</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="brand-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Green Valley"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Green Valley</p>
+                                </label>
+                            </div>
+                        </details>
+                        <details class="py-3 group">
+                            <summary class="flex cursor-pointer items-center justify-between gap-4 py-2 list-none">
+                                <p class="text-gray-800 dark:text-gray-200 font-semibold">Dietary Needs</p>
+                                <span class="material-symbols-outlined text-gray-600 dark:text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="pt-2">
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="diet-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Organic"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Organic</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="diet-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Non-GMO"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Non-GMO</p>
+                                </label>
+                                <label class="flex items-center gap-x-3 py-2 cursor-pointer">
+                                    <input class="diet-filter h-5 w-5 rounded border-gray-300 dark:border-gray-600 bg-transparent text-primary checked:bg-primary checked:border-primary checked:bg-[image:--checkbox-tick-svg] focus:ring-2 focus:ring-offset-0 focus:ring-primary/50" type="checkbox" value="Vegan"/>
+                                    <p class="text-gray-700 dark:text-gray-300 text-sm">Vegan</p>
+                                </label>
+                            </div>
+                        </details>
+                    </div>
+                </aside>
+                <div class="lg:col-span-3">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h1 class="text-gray-900 dark:text-white text-4xl font-black tracking-tight">Fresh Vegetables</h1>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400" for="sort">Sort by:</label>
+                            <select class="form-select rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:border-primary focus:ring-primary/50 text-sm" id="sort">
+                                <option value="popularity">Popularity</option>
+                                <option value="price-low">Price: Low to High</option>
+                                <option value="price-high">Price: High to Low</option>
+                                <option value="alphabetical">Alphabetical</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" id="productsGrid">
+                        <!-- Products will be populated dynamically -->
+                    </div>
+                    <div class="mt-10 flex justify-center">
+                        <nav class="flex items-center gap-2" id="pagination">
+                            <!-- Pagination will be generated dynamically -->
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+              <footer class="bg-slate-100 dark:bg-slate-900/50 mt-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-12">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                        <div class="col-span-2 lg:col-span-1">
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 mb-4">
+                                <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">Your one-stop shop for the freshest groceries, delivered with care.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Customer Service</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="help.html">Help Center</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="contact.html">Contact Us</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="returns-refund.html">Returns &amp; Refunds</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">About Us</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="our-story.html">Our Story</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="career.html">Careers</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="press.html">Press</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Legal</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="t&c.html">Terms of Service</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="PP.html">Privacy Policy</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="shipping-policy.html">Shipping Policy</li>
+               <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="delivery-policy.html">Delivery Policy</a></li>                 
+                               
+                            </ul>
+                        </div>
+                        <div class="col-span-2 md:col-span-4 lg:col-span-1">
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Join Our Newsletter</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Get the best deals and fresh updates delivered to your inbox.</p>
+                            <form class="flex">
+                                <input class="form-input w-full rounded-r-none rounded-l-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary/50 text-sm" placeholder="Enter your email" type="email"/>
+                                <button class="bg-primary text-slate-900 font-bold px-4 rounded-r-lg hover:bg-opacity-90 transition-colors text-sm" type="submit">Subscribe</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+                        <p>© 2024 FreshCart. All Rights Reserved.</p>
+                        <div class="flex space-x-4 mt-4 md:mt-0">
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" fill-rule="evenodd"></path></svg>
+                            </a>
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg>
+                            </a>
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.11 11.16c-1.33.64-2.68.96-4.06.96-1.42 0-2.8-.34-4.12-.99A.5.5 0 016.5 12.5v-1a.5.5 0 01.44-.5c1.32.65 2.7.98 4.1.98s2.78-.33 4.1-.98a.5.5 0 01.44.5v1a.5.5 0 01-.47.66zm-7.7-4.42a.5.5 0 01.4-.2h.02a.5.5 0 01.4.2l.3.52a.5.5 0 01-.4.8h-.02a.5.5 0 01-.4-.8l.3-.52zm6.8 0a.5.5 0 01.4-.2h.02a.5.5 0 01.4.2l.3.52a.5.5 0 01-.4.8h-.02a.5.5 0 01-.4-.8l.3-.52z" fill-rule="evenodd"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    
+
+    <script>
+
+        // Product data with working images
+        const products = [
+            { id: 1, name: "Organic Broccoli", price: 2.49, category: "Cruciferous", brand: "Organic Farms", dietary: ["Organic"], image: "https://images.unsplash.com/photo-1584270354949-c26b0d5b4a0c?w=400&h=300&fit=crop", onSale: true },
+            { id: 2, name: "Red Bell Peppers", price: 1.99, category: "Nightshades", brand: "Fresh Harvest", dietary: ["Non-GMO"], image: "https://images.unsplash.com/photo-1528825871116-c4c0c06b9647?w=400&h=300&fit=crop" },
+            { id: 3, name: "Organic Carrots", price: 1.79, category: "Root Vegetables", brand: "Organic Farms", dietary: ["Organic", "Non-GMO"], image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&h=300&fit=crop" },
+            { id: 4, name: "Hass Avocados", price: 2.29, category: "Fruits", brand: "Green Valley", dietary: ["Organic"], image: "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=400&h=300&fit=crop" },
+            { id: 5, name: "Green Leaf Lettuce", price: 1.99, category: "Leafy Greens", brand: "Fresh Harvest", dietary: ["Organic", "Vegan"], image: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&h=300&fit=crop" },
+            { id: 6, name: "Cherry Tomatoes", price: 3.49, category: "Nightshades", brand: "Organic Farms", dietary: ["Organic", "Non-GMO"], image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&h=300&fit=crop", onSale: true },
+            { id: 7, name: "Spinach", price: 2.99, category: "Leafy Greens", brand: "Green Valley", dietary: ["Organic", "Vegan"], image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400&h=300&fit=crop" },
+            { id: 8, name: "Sweet Potatoes", price: 1.49, category: "Root Vegetables", brand: "Fresh Harvest", dietary: ["Organic"], image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop" },
+            { id: 9, name: "Cauliflower", price: 3.29, category: "Cruciferous", brand: "Organic Farms", dietary: ["Organic", "Non-GMO"], image: "https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=300&fit=crop" },
+            { id: 10, name: "Zucchini", price: 1.89, category: "Squash", brand: "Green Valley", dietary: ["Organic"], image: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&h=300&fit=crop" },
+            { id: 11, name: "Eggplant", price: 2.19, category: "Nightshades", brand: "Fresh Harvest", dietary: ["Organic"], image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=300&fit=crop" },
+            { id: 12, name: "Kale", price: 2.79, category: "Leafy Greens", brand: "Organic Farms", dietary: ["Organic", "Vegan"], image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop", onSale: true }
+        ];
+
+        // Cart functionality
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+        // Update cart in localStorage
+        function updateCartStorage() {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        // Update cart UI
+        function updateCartUI() {
+            const cartCountElements = document.querySelectorAll('.cart-count');
+            const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+            
+            cartCountElements.forEach(element => {
+                element.textContent = totalItems;
+            });
+        }
+
+        // DOM Elements
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const productsGrid = document.getElementById('productsGrid');
+        const pagination = document.getElementById('pagination');
+        const searchInput = document.getElementById('searchInput');
+        const sortSelect = document.getElementById('sort');
+        const clearAllFilters = document.getElementById('clearAllFilters');
+
+        // Filter elements
+        const categoryFilters = document.querySelectorAll('.category-filter');
+        const brandFilters = document.querySelectorAll('.brand-filter');
+        const dietFilters = document.querySelectorAll('.diet-filter');
+
+        // Price range slider
+        const priceSlider = document.getElementById('priceSlider');
+        const priceRange = document.getElementById('priceRange');
+        const minThumb = document.getElementById('minThumb');
+        const maxThumb = document.getElementById('maxThumb');
+        const minPrice = document.getElementById('minPrice');
+        const maxPrice = document.getElementById('maxPrice');
+
+        // State
+        let currentPage = 1;
+        const productsPerPage = 6;
+        let filteredProducts = [...products];
+        let currentFilters = {
+            categories: [],
+            brands: [],
+            diets: [],
+            priceRange: [0, 50],
+            search: '',
+            sort: 'popularity'
+        };
+
+        // Toast functionality
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Mobile Menu Functionality
+        function openMenu() {
+            mobileMenu.classList.add('open');
+            menuOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMenu() {
+            mobileMenu.classList.remove('open');
+            menuOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        menuBtn.addEventListener('click', openMenu);
+        closeMenuBtn.addEventListener('click', closeMenu);
+        menuOverlay.addEventListener('click', closeMenu);
+
+        // Price Range Slider
+        function initPriceSlider() {
+            let isDragging = false;
+            let activeThumb = null;
+
+            function updatePriceRange() {
+                const sliderRect = priceSlider.getBoundingClientRect();
+                const minPercent = (parseInt(minThumb.style.left) || 10) / 100;
+                const maxPercent = (parseInt(maxThumb.style.left) || 80) / 100;
+                
+                const minValue = 1 + minPercent * 25;
+                const maxValue = 1 + maxPercent * 80;
+                
+                currentFilters.priceRange = [minValue, maxValue];
+                minPrice.textContent = `$${minValue.toFixed(2)}`;
+                maxPrice.textContent = `$${maxValue.toFixed(2)}`;
+                
+                priceRange.style.left = `${minPercent * 100}%`;
+                priceRange.style.width = `${(maxPercent - minPercent) * 100}%`;
+                
+                filterProducts();
+            }
+
+            function startDrag(e, thumb) {
+                isDragging = true;
+                activeThumb = thumb;
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchmove', drag);
+                document.addEventListener('touchend', stopDrag);
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                
+                const sliderRect = priceSlider.getBoundingClientRect();
+                let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                let percent = ((clientX - sliderRect.left) / sliderRect.width) * 100;
+                percent = Math.max(0, Math.min(100, percent));
+                
+                if (activeThumb === minThumb) {
+                    const maxPercent = parseInt(maxThumb.style.left) || 80;
+                    percent = Math.min(percent, maxPercent - 1);
+                    minThumb.style.left = `${percent}%`;
+                } else {
+                    const minPercent = parseInt(minThumb.style.left) || 10;
+                    percent = Math.max(percent, minPercent + 5);
+                    maxThumb.style.left = `${percent}%`;
+                }
+                
+                updatePriceRange();
+            }
+
+            function stopDrag() {
+                isDragging = false;
+                activeThumb = null;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchmove', drag);
+                document.removeEventListener('touchend', stopDrag);
+            }
+
+            // Initialize positions
+            minThumb.style.left = '1%';
+            maxThumb.style.left = '80%';
+            updatePriceRange();
+
+            // Event listeners
+            minThumb.addEventListener('mousedown', (e) => startDrag(e, minThumb));
+            maxThumb.addEventListener('mousedown', (e) => startDrag(e, maxThumb));
+            minThumb.addEventListener('touchstart', (e) => startDrag(e, minThumb));
+            maxThumb.addEventListener('touchstart', (e) => startDrag(e, maxThumb));
+        }
+
+        // Filter products
+        function filterProducts() {
+            filteredProducts = products.filter(product => {
+                // Category filter
+                if (currentFilters.categories.length > 0 && !currentFilters.categories.includes(product.category)) {
+                    return false;
+                }
+                
+                // Brand filter
+                if (currentFilters.brands.length > 0 && !currentFilters.brands.includes(product.brand)) {
+                    return false;
+                }
+                
+                // Dietary filter
+                if (currentFilters.diets.length > 0) {
+                    const hasDiet = currentFilters.diets.some(diet => product.dietary.includes(diet));
+                    if (!hasDiet) return false;
+                }
+                
+                // Price filter
+                if (product.price < currentFilters.priceRange[0] || product.price > currentFilters.priceRange[1]) {
+                    return false;
+                }
+                
+                // Search filter
+                if (currentFilters.search && !product.name.toLowerCase().includes(currentFilters.search.toLowerCase())) {
+                    return false;
+                }
+                
+                return true;
+            });
+
+            // Sort products
+            sortProducts();
+            
+            // Reset to first page
+            currentPage = 1;
+            renderProducts();
+            renderPagination();
+        }
+
+        // Sort products
+        function sortProducts() {
+            switch (currentFilters.sort) {
+                case 'price-low':
+                    filteredProducts.sort((a, b) => a.price - b.price);
+                    break;
+                case 'price-high':
+                    filteredProducts.sort((a, b) => b.price - a.price);
+                    break;
+                case 'alphabetical':
+                    filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'popularity':
+                default:
+                    // Keep original order for popularity
+                    break;
+            }
+        }
+
+        // Render products
+        function renderProducts() {
+            const startIndex = (currentPage - 1) * productsPerPage;
+            const endIndex = startIndex + productsPerPage;
+            const productsToShow = filteredProducts.slice(startIndex, endIndex);
+
+            productsGrid.innerHTML = '';
+
+            if (productsToShow.length === 0) {
+                productsGrid.innerHTML = `
+                    <div class="col-span-3 text-center py-12">
+                        <span class="material-symbols-outlined text-6xl text-gray-400 mb-4">search_off</span>
+                        <h3 class="text-xl font-bold text-gray-600 dark:text-gray-400 mb-2">No products found</h3>
+                        <p class="text-gray-500 dark:text-gray-500">Try adjusting your filters or search terms</p>
+                    </div>
+                `;
+                return;
+            }
+
+            productsToShow.forEach(product => {
+                const productElement = document.createElement('div');
+                productElement.className = 'group flex flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-sm transition-all hover:shadow-lg';
+                productElement.innerHTML = `
+                    <div class="relative">
+                        <img class="h-56 w-full object-cover" alt="${product.name}" src="${product.image}"/>
+                        ${product.onSale ? '<div class="absolute top-2 right-2 rounded-full bg-orange-400 px-2 py-0.5 text-xs font-semibold text-white">Sale</div>' : ''}
+                    </div>
+                    <div class="flex flex-1 flex-col p-4">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white">${product.name}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">$${product.price.toFixed(2)}</p>
+                        <button class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90 add-to-cart" data-product='${JSON.stringify(product)}'>
+                            <span class="material-symbols-outlined" style="font-size: 20px;">add_shopping_cart</span>
+                            Add to Cart
+                        </button>
+                    </div>
+                `;
+                productsGrid.appendChild(productElement);
+            });
+
+            // Add event listeners to add to cart buttons
+            document.querySelectorAll('.add-to-cart').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const product = JSON.parse(e.target.closest('button').dataset.product);
+                    addToCart(product);
+                });
+            });
+        }
+
+        // Add to cart function
+        function addToCart(product) {
+            const existingItem = cart.find(item => item.id === product.id);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+            
+            updateCartStorage();
+            updateCartUI();
+            showToast(`${product.name} added to cart!`);
+        }
+
+        // Render pagination
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = '';
+
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `
+                    <a class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 pagination-btn" data-page="${currentPage - 1}">
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </a>
+                `;
+            }
+
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            if (startPage > 1) {
+                paginationHTML += `
+                    <a class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 pagination-btn" data-page="1">1</a>
+                    ${startPage > 2 ? '<span class="flex h-10 w-10 items-center justify-center text-gray-500">...</span>' : ''}
+                `;
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <a class="flex h-10 w-10 items-center justify-center rounded-lg border ${i === currentPage ? 'border-primary bg-primary text-white' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'} pagination-btn" data-page="${i}">
+                        ${i}
+                    </a>
+                `;
+            }
+
+            if (endPage < totalPages) {
+                paginationHTML += `
+                    ${endPage < totalPages - 1 ? '<span class="flex h-10 w-10 items-center justify-center text-gray-500">...</span>' : ''}
+                    <a class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 pagination-btn" data-page="${totalPages}">${totalPages}</a>
+                `;
+            }
+
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHTML += `
+                    <a class="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 pagination-btn" data-page="${currentPage + 1}">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </a>
+                `;
+            }
+
+            pagination.innerHTML = paginationHTML;
+
+            // Add event listeners to pagination buttons
+            document.querySelectorAll('.pagination-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = parseInt(e.target.closest('a').dataset.page);
+                    currentPage = page;
+                    renderProducts();
+                    renderPagination();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+        }
+
+        // Event Listeners
+        searchInput.addEventListener('input', (e) => {
+            currentFilters.search = e.target.value;
+            filterProducts();
+        });
+
+        sortSelect.addEventListener('change', (e) => {
+            currentFilters.sort = e.target.value;
+            filterProducts();
+        });
+
+        categoryFilters.forEach(filter => {
+            filter.addEventListener('change', (e) => {
+                currentFilters.categories = Array.from(categoryFilters)
+                    .filter(f => f.checked)
+                    .map(f => f.value);
+                filterProducts();
+            });
+        });
+
+        brandFilters.forEach(filter => {
+            filter.addEventListener('change', (e) => {
+                currentFilters.brands = Array.from(brandFilters)
+                    .filter(f => f.checked)
+                    .map(f => f.value);
+                filterProducts();
+            });
+        });
+
+        dietFilters.forEach(filter => {
+            filter.addEventListener('change', (e) => {
+                currentFilters.diets = Array.from(dietFilters)
+                    .filter(f => f.checked)
+                    .map(f => f.value);
+                filterProducts();
+            });
+        });
+
+        clearAllFilters.addEventListener('click', () => {
+            // Clear all checkboxes
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Reset price slider
+            minThumb.style.left = '10%';
+            maxThumb.style.left = '80%';
+            
+            // Reset search
+            searchInput.value = '';
+            
+            // Reset sort
+            sortSelect.value = 'popularity';
+            
+            // Reset filters
+            currentFilters = {
+                categories: [],
+                brands: [],
+                diets: [],
+                priceRange: [5, 50],
+                search: '',
+                sort: 'popularity'
+            };
+            
+            filterProducts();
+            showToast('All filters cleared!');
+        });
+
+        // Initialize
+        function init() {
+            initPriceSlider();
+            renderProducts();
+            renderPagination();
+            updateCartUI();
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

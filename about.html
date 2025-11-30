@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>About Us - Grocery Go</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    
+    <!-- Firebase & EmailJS -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        /* Mobile Menu Styles */
+        .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
+        .mobile-menu.open { transform: translateX(0); }
+        .menu-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
+        .menu-overlay.active { opacity: 1; visibility: visible; }
+        /* Hamburger Animation */
+        .hamburger-line { transition: all 0.3s ease-in-out; }
+        .hamburger.active .hamburger-line:nth-child(1) { transform: rotate(45deg) translate(6px, 6px); }
+        .hamburger.active .hamburger-line:nth-child(2) { opacity: 0; }
+        .hamburger.active .hamburger-line:nth-child(3) { transform: rotate(-45deg) translate(6px, -6px); }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+        
+        <!-- Mobile Menu Overlay -->
+        <div class="menu-overlay fixed inset-0 bg-black/50 z-40" id="menuOverlay"></div>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-slate-900 shadow-xl z-50 p-6" id="mobileMenu">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-bold">Menu</h2>
+                <button class="hamburger active" id="closeMenuBtn">
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="product.html">Shop</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="cart.html">Cart</a>
+
+            </nav>
+        </div>
+
+        <div class="layout-container flex h-full grow flex-col">
+            <!-- Header -->
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-3 sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+                <div class="flex items-center gap-8">
+                    <button class="lg:hidden hamburger flex flex-col" id="menuBtn">
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                    </button>
+                    <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 cursor-pointer" onclick="window.location.href='index.html'">
+                        <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                    </div>
+                    <nav class="hidden lg:flex items-center gap-9">
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="index.html">Home</a>
+                        <a class="text-sm font-medium text-primary transition-colors" href="product.html">Shop</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="cart.html">Cart</a>
+                    </nav>
+                </div>
+            </header>
+
+            <main class="flex-1">
+                <div class="flex flex-col gap-12">
+                    <!-- Hero Section -->
+                    <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 pt-5">
+                        <div class="relative min-h-[400px] rounded-xl overflow-hidden">
+                            <img alt="Fresh produce" class="absolute inset-0 w-full h-full object-cover" src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=1600&h=900&fit=crop"/>
+                            <div class="absolute inset-0 bg-black/50"></div>
+                            <div class="relative h-full min-h-[400px] flex flex-col items-center justify-center text-center p-4">
+                                <div class="flex flex-col gap-4 max-w-2xl mx-auto">
+                                    <h1 class="text-white text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tighter">About Grocery Go</h1>
+                                    <p class="text-white/90 text-base sm:text-lg font-normal leading-normal max-w-xl mx-auto">Your community's source for the freshest local and organic groceries, delivered in minutes.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mission & Values -->
+                    <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40">
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 md:p-12 shadow-sm">
+                            <h2 class="text-3xl font-bold text-center mb-4 text-slate-900 dark:text-slate-50">Our Mission & Values</h2>
+                            <p class="text-center text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12">We are committed to providing our community with high-quality, fresh, and sustainable food choices.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                                        <span class="material-symbols-outlined text-4xl">local_florist</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold mb-2 text-slate-800 dark:text-slate-100">Freshness First</h3>
+                                    <p class="text-slate-500 dark:text-slate-400 text-sm">We source the freshest produce daily to ensure the best quality for your family.</p>
+                                </div>
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                                        <span class="material-symbols-outlined text-4xl">groups</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold mb-2 text-slate-800 dark:text-slate-100">Community Focused</h3>
+                                    <p class="text-slate-500 dark:text-slate-400 text-sm">Supporting local farmers and giving back to the community we serve.</p>
+                                </div>
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                                        <span class="material-symbols-outlined text-4xl">sustainability</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold mb-2 text-slate-800 dark:text-slate-100">Sustainability</h3>
+                                    <p class="text-slate-500 dark:text-slate-400 text-sm">Dedicated to eco-friendly practices, from reducing waste to promoting reusable bags.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Meet the Team -->
+                    <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 pb-12">
+                        <h2 class="text-3xl font-bold text-center mb-4 text-slate-900 dark:text-slate-50">Meet the Team</h2>
+                        <p class="text-center text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-12">The passionate people dedicated to bringing you the best groceries every day.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div class="flex flex-col items-center text-center group">
+                                <div class="relative w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-800 group-hover:border-primary transition-colors duration-300">
+                                    <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop" alt="John Smith"/>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">John Smith</h3>
+                                <p class="text-primary font-medium">Founder & CEO</p>
+                            </div>
+                            <div class="flex flex-col items-center text-center group">
+                                <div class="relative w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-800 group-hover:border-primary transition-colors duration-300">
+                                    <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop" alt="Jane Doe"/>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Jane Doe</h3>
+                                <p class="text-primary font-medium">Head of Produce</p>
+                            </div>
+                            <div class="flex flex-col items-center text-center group">
+                                <div class="relative w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-800 group-hover:border-primary transition-colors duration-300">
+                                    <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop" alt="Mike Johnson"/>
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Mike Johnson</h3>
+                                <p class="text-primary font-medium">Community Manager</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation to Subpages -->
+                    <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 pb-20">
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <a href="our-story.html" class="group block p-8 bg-slate-100 dark:bg-slate-900 rounded-xl hover:bg-primary/10 transition-colors">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary mb-2 flex items-center gap-2">
+                                    Our Story <span class="material-symbols-outlined">arrow_forward</span>
+                                </h3>
+                                <p class="text-slate-500 dark:text-slate-400 text-sm">Read about our journey from a small stall to a community staple.</p>
+                            </a>
+                            <a href="careers.html" class="group block p-8 bg-slate-100 dark:bg-slate-900 rounded-xl hover:bg-primary/10 transition-colors">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary mb-2 flex items-center gap-2">
+                                    Careers <span class="material-symbols-outlined">arrow_forward</span>
+                                </h3>
+                                <p class="text-slate-500 dark:text-slate-400 text-sm">Join our team! We are always looking for passionate people.</p>
+                            </a>
+                            <a href="press.html" class="group block p-8 bg-slate-100 dark:bg-slate-900 rounded-xl hover:bg-primary/10 transition-colors">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-primary mb-2 flex items-center gap-2">
+                                    Press <span class="material-symbols-outlined">arrow_forward</span>
+                                </h3>
+                                <p class="text-slate-500 dark:text-slate-400 text-sm">Latest news, press releases, and media resources.</p>
+                            </a>
+                         </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="bg-slate-100 dark:bg-slate-900/50 mt-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-12">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                        <div class="col-span-2 lg:col-span-1">
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 mb-4">
+                                <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">Your one-stop shop for the freshest groceries, delivered with care.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Customer Service</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="help.html">Help Center</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="contact.html">Contact Us</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="returns-refund.html">Returns & Refunds</a></li>
+                                
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">About Us</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="our-story.html">Our Story</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="careers.html">Careers</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="press.html">Press</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Legal</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="t&c.html">Terms of Service</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="PP.html">Privacy Policy</a></li>
+                                                   <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="shipping-policy.html">Shipping Policy</li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="delivery-policy.html">Delivery Policy</a></li>
+                                
+                                </ul>             
+                            </ul>
+                        </div>
+                        <div class="col-span-2 md:col-span-4 lg:col-span-1">
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Join Our Newsletter</h3>
+                            <form class="flex">
+                                <input class="form-input w-full rounded-r-none rounded-l-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary/50 text-sm" placeholder="Enter your email" type="email"/>
+                                <button class="bg-primary text-slate-900 font-bold px-4 rounded-r-lg hover:bg-opacity-90 transition-colors text-sm" type="submit">Go</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    <script>
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        function openMenu() {
+            mobileMenu.classList.add('open');
+            menuOverlay.classList.add('active');
+            menuBtn.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMenu() {
+            mobileMenu.classList.remove('open');
+            menuOverlay.classList.remove('active');
+            menuBtn.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        menuBtn.addEventListener('click', openMenu);
+        closeMenuBtn.addEventListener('click', closeMenu);
+        menuOverlay.addEventListener('click', closeMenu);
+    </script>
+</body>
+</html>
+

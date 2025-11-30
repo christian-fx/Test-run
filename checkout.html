@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Checkout - Grocery Go</title>
+    
+    <!-- Firebase FIRST -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Then config -->
+    <script src="config.js"></script>
+    
+    <!-- Then Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4CAF50",
+                        "background-light": "#F4F4F4",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        
+        .menu-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Toast Styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-in-out;
+            max-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background-color: #10B981;
+        }
+
+        .toast.error {
+            background-color: #EF4444;
+        }
+
+        .toast.warning {
+            background-color: #F59E0B;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            transform: scale(0.9);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Checkout Steps */
+        .step-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .step-indicator.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .step-indicator.completed {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .step-indicator.inactive {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: #e5e7eb;
+            transition: background 0.3s ease;
+        }
+        
+        .step-line.active {
+            background: #4CAF50;
+        }
+        
+        .step-content {
+            display: none;
+        }
+        
+        .step-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#333333] dark:text-gray-200">
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Address Modal -->
+    <div class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" id="addressModal">
+        <div class="modal-content bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="modalTitle">Add New Address</h3>
+                    <button class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onclick="closeAddressModal()">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="addressForm" class="space-y-4">
+                    <input type="hidden" id="editAddressId">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Label</label>
+                            <input type="text" id="addressLabel" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" placeholder="Home, Work, etc." required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name</label>
+                            <input type="text" id="fullName" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Street Address</label>
+                        <input type="text" id="addressStreet" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" required>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+                            <input type="text" id="city" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
+                            <input type="text" id="state" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ZIP Code</label>
+                            <input type="text" id="zipCode" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Country</label>
+                            <input type="text" id="country" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" value="United States" required>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="setDefault" class="rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="setDefault" class="text-sm text-gray-700 dark:text-gray-300">Set as default address</label>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 bg-primary text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                            Save Address
+                        </button>
+                        <button type="button" onclick="closeAddressModal()" class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Method Modal -->
+    <div class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" id="paymentModal">
+        <div class="modal-content bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="paymentModalTitle">Add Payment Method</h3>
+                    <button class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onclick="closePaymentModal()">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="paymentForm" class="space-y-4">
+                    <input type="hidden" id="editPaymentId">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Card Number</label>
+                        <input type="text" id="cardNumber" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" placeholder="1234 5678 9012 3456" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expiry Date</label>
+                            <input type="text" id="cardExpiry" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" placeholder="MM/YY" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CVV</label>
+                            <input type="text" id="cardCvv" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" placeholder="123" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cardholder Name</label>
+                        <input type="text" id="cardName" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary px-3 py-2" required>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="setPaymentDefault" class="rounded border-gray-300 text-primary focus:ring-primary">
+                        <label for="setPaymentDefault" class="text-sm text-gray-700 dark:text-gray-300">Set as default payment method</label>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="flex-1 bg-primary text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                            Save Card
+                        </button>
+                        <button type="button" onclick="closePaymentModal()" class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="menu-overlay fixed inset-0 bg-black/50 z-40 lg:hidden" id="menuOverlay"></div>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-xl z-50 p-6 lg:hidden" id="mobileMenu">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-bold">Menu</h2>
+            <button class="text-2xl" id="closeMenuBtn">×</button>
+        </div>
+        <nav class="space-y-4">
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="products.html">Shop</a>
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#">Deals</a>
+        </nav>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex gap-2">
+                <button class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='profile.html'">
+                    <span class="material-symbols-outlined">person</span>
+                </button>
+                <button class="relative flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='cart.html'">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <div class="cart-count absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">0</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+        <header class="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm font-display">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-700 py-4">
+                    <div class="flex items-center gap-8">
+                        <!-- Mobile Menu Button -->
+                        <button class="lg:hidden text-2xl" id="menuBtn">☰</button>
+                        
+                        <div class="flex items-center gap-3 text-primary">
+                            <h2 class="text-gray-800 dark:text-white text-xl font-bold tracking-tight">Grocery Go</h2>
+                        </div>
+                        <nav class="hidden md:flex items-center gap-8">
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="index.html">Home</a>
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="products.html">Shop</a>
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="#">Deals</a>
+                        </nav>
+                    </div>
+                    <div class="flex flex-1 justify-end items-center gap-4">
+                        <div class="flex gap-2">
+                            <button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='profile.html'">
+                                <span class="material-symbols-outlined">person</span>
+                            </button>
+                            <button class="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='cart.html'">
+                                <span class="material-symbols-outlined">shopping_cart</span>
+                                <div class="cart-count absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">0</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Breadcrumb -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <a class="text-gray-500 dark:text-gray-400 text-sm font-medium hover:text-primary" href="index.html">Home</a>
+                <span class="text-gray-500 dark:text-gray-400 text-sm font-medium">/</span>
+                <a class="text-gray-500 dark:text-gray-400 text-sm font-medium hover:text-primary" href="products.html">Shop</a>
+                <span class="text-gray-500 dark:text-gray-400 text-sm font-medium">/</span>
+                <a class="text-gray-500 dark:text-gray-400 text-sm font-medium hover:text-primary" href="cart.html">Cart</a>
+                <span class="text-gray-500 dark:text-gray-400 text-sm font-medium">/</span>
+                <span class="text-gray-700 dark:text-gray-300 text-sm font-medium">Checkout</span>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div class="flex min-w-72 flex-col gap-2">
+                    <h1 class="text-gray-900 dark:text-white text-4xl font-black tracking-tight">Checkout</h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-base font-normal">Complete your order in a few simple steps.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Checkout Steps & Forms -->
+                <div class="lg:col-span-2 space-y-8">
+                    <!-- Checkout Progress -->
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-6">
+                        <!-- Progress Steps -->
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="flex items-center flex-1">
+                                <div class="step-indicator active" id="step1-indicator">1</div>
+                                <div class="step-line active mx-2"></div>
+                                <div class="step-indicator inactive" id="step2-indicator">2</div>
+                                <div class="step-line inactive mx-2"></div>
+                                <div class="step-indicator inactive" id="step3-indicator">3</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Delivery Address -->
+                        <div class="step-content active" id="step1-content">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Delivery Address</h3>
+                            </div>
+                            
+                            <!-- Saved Addresses -->
+                            <div class="mb-6">
+                                <h4 class="font-semibold text-gray-700 dark:text-gray-300 mb-4">Select Delivery Address</h4>
+                                <div class="space-y-3" id="addressList">
+                                    <!-- Addresses will be populated from Firebase -->
+                                </div>
+                                
+                                <button onclick="openAddressModal()" class="w-full mt-4 p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined">add</span>
+                                    Add New Address
+                                </button>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button onclick="nextStep()" class="bg-primary text-white font-bold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity">
+                                    Continue to Payment
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Payment -->
+                        <div class="step-content" id="step2-content">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Payment Method</h3>
+                                <button onclick="prevStep()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium">
+                                    Back to Address
+                                </button>
+                            </div>
+                            
+                            <!-- Payment Methods -->
+                            <div class="space-y-4" id="paymentMethodsList">
+                                <!-- Payment methods will be populated from Firebase -->
+                            </div>
+                            
+                            <button onclick="openPaymentModal()" class="w-full mt-4 p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">add</span>
+                                Add New Payment Method
+                            </button>
+
+                            <div class="flex justify-between pt-6">
+                                <button onclick="prevStep()" class="px-6 py-3 text-gray-600 dark:text-gray-400 font-medium rounded-lg hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+                                    Back
+                                </button>
+                                <button onclick="nextStep()" class="bg-primary text-white font-bold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity">
+                                    Review Order
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Review -->
+                        <div class="step-content" id="step3-content">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Review Your Order</h3>
+                                <button onclick="prevStep()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium">
+                                    Back to Payment
+                                </button>
+                            </div>
+                            
+                            <!-- Order Summary -->
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 mb-6">
+                                <h4 class="font-semibold text-gray-700 dark:text-gray-300 mb-4">Order Items</h4>
+                                <div id="reviewItems" class="space-y-4">
+                                    <!-- Order items will be populated here -->
+                                </div>
+                            </div>
+
+                            <!-- Delivery Address Review -->
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 mb-6">
+                                <div class="flex justify-between items-start mb-4">
+                                    <h4 class="font-semibold text-gray-700 dark:text-gray-300">Delivery Address</h4>
+                                    <button onclick="goToStep(1)" class="text-primary hover:underline text-sm">Change</button>
+                                </div>
+                                <div id="selectedAddress">
+                                    <!-- Selected address will be shown here -->
+                                </div>
+                            </div>
+
+                            <!-- Payment Method Review -->
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 mb-6">
+                                <div class="flex justify-between items-start mb-4">
+                                    <h4 class="font-semibold text-gray-700 dark:text-gray-300">Payment Method</h4>
+                                    <button onclick="goToStep(2)" class="text-primary hover:underline text-sm">Change</button>
+                                </div>
+                                <div id="selectedPayment">
+                                    <!-- Selected payment method will be shown here -->
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <button onclick="prevStep()" class="px-6 py-3 text-gray-600 dark:text-gray-400 font-medium rounded-lg hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+                                    Back
+                                </button>
+                                <button onclick="placeOrder()" class="bg-primary text-white font-bold py-3 px-8 rounded-lg hover:opacity-90 transition-opacity">
+                                    Place Order
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Summary Sidebar -->
+                <div class="lg:col-span-1">
+                    <div class="sticky top-24">
+                        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-6 space-y-6">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Order Summary</h3>
+                            <div id="orderItems" class="space-y-4 max-h-64 overflow-y-auto">
+                                <!-- Cart items will be populated here -->
+                            </div>
+                            <div class="space-y-3 text-sm pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 dark:text-gray-400">Subtotal</span>
+                                    <span class="text-gray-900 dark:text-white" id="subtotal">$0.00</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 dark:text-gray-400">Delivery</span>
+                                    <span class="text-gray-900 dark:text-white" id="delivery">$5.00</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500 dark:text-gray-400">Taxes</span>
+                                    <span class="text-gray-900 dark:text-white" id="taxes">$0.00</span>
+                                </div>
+                            </div>
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-bold text-gray-900 dark:text-white">Total</span>
+                                    <span class="text-2xl font-black text-gray-900 dark:text-white" id="orderTotal">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+                    <footer class="bg-slate-100 dark:bg-slate-900/50 mt-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-12">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                        <div class="col-span-2 lg:col-span-1">
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 mb-4">
+                                <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">Your one-stop shop for the freshest groceries, delivered with care.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Customer Service</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="help.html">Help Center</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="contact.html">Contact Us</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="returns-refund.html">Returns &amp; Refunds</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">About Us</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="our-story.html">Our Story</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="career.html">Careers</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="press.html">Press</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Legal</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="t&c.html">Terms of Service</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="PP.html">Privacy Policy</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="shipping-policy.html">Shipping Policy</li>
+               <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="delivery-policy.html">Delivery Policy</a></li>                 
+                               
+                            </ul>
+                        </div>
+                        <div class="col-span-2 md:col-span-4 lg:col-span-1">
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Join Our Newsletter</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Get the best deals and fresh updates delivered to your inbox.</p>
+                            <form class="flex">
+                                <input class="form-input w-full rounded-r-none rounded-l-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary/50 text-sm" placeholder="Enter your email" type="email"/>
+                                <button class="bg-primary text-slate-900 font-bold px-4 rounded-r-lg hover:bg-opacity-90 transition-colors text-sm" type="submit">Subscribe</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+                        <p>© 2024 FreshCart. All Rights Reserved.</p>
+                        <div class="flex space-x-4 mt-4 md:mt-0">
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" fill-rule="evenodd"></path></svg>
+                            </a>
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg>
+                            </a>
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.11 11.16c-1.33.64-2.68.96-4.06.96-1.42 0-2.8-.34-4.12-.99A.5.5 0 016.5 12.5v-1a.5.5 0 01.44-.5c1.32.65 2.7.98 4.1.98s2.78-.33 4.1-.98a.5.5 0 01.44.5v1a.5.5 0 01-.47.66zm-7.7-4.42a.5.5 0 01.4-.2h.02a.5.5 0 01.4.2l.3.52a.5.5 0 01-.4.8h-.02a.5.5 0 01-.4-.8l.3-.52zm6.8 0a.5.5 0 01.4-.2h.02a.5.5 0 01.4.2l.3.52a.5.5 0 01-.4.8h-.02a.5.5 0 01-.4-.8l.3-.52z" fill-rule="evenodd"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+
+    
+<script>
+    // Checkout state
+    let currentStep = 1;
+    let selectedAddress = null;
+    let selectedPaymentMethod = null;
+    let userAddresses = [];
+    let userPaymentMethods = [];
+
+    // Toast functionality
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Update cart UI
+    function updateCartUI() {
+        const cartCountElements = document.querySelectorAll('.cart-count');
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+        
+        cartCountElements.forEach(element => {
+            element.textContent = totalItems;
+        });
+    }
+
+    // Calculate cart totals
+    function calculateCartTotals() {
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        const delivery = 5.00;
+        const taxes = subtotal * 0.08;
+        const orderTotal = subtotal + delivery + taxes;
+
+        document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+        document.getElementById('taxes').textContent = `$${taxes.toFixed(2)}`;
+        document.getElementById('orderTotal').textContent = `$${orderTotal.toFixed(2)}`;
+
+        // Update order items
+        const orderItemsContainer = document.getElementById('orderItems');
+        const reviewItemsContainer = document.getElementById('reviewItems');
+        
+        if (cart.length === 0) {
+            orderItemsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Your cart is empty</p>';
+            reviewItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Your cart is empty</p>';
+            return;
+        }
+
+        orderItemsContainer.innerHTML = cart.map(item => `
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img src="${item.image}" alt="${item.name}" class="w-12 h-12 object-cover rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white truncate">${item.name}</p>
+                        <p class="text-xs text-gray-500">Qty: ${item.quantity}</p>
+                    </div>
+                </div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">$${(item.price * item.quantity).toFixed(2)}</p>
+            </div>
+        `).join('');
+
+        reviewItemsContainer.innerHTML = cart.map(item => `
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg">
+                    <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">${item.name}</p>
+                        <p class="text-xs text-gray-500">Qty: ${item.quantity}</p>
+                    </div>
+                </div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">$${(item.price * item.quantity).toFixed(2)}</p>
+            </div>
+        `).join('');
+    }
+
+    // Step navigation
+    function nextStep() {
+        if (currentStep === 1 && !selectedAddress) {
+            showToast('Please select a delivery address', 'error');
+            return;
+        }
+
+        if (currentStep === 2 && !selectedPaymentMethod) {
+            showToast('Please select a payment method', 'error');
+            return;
+        }
+
+        // Hide current step
+        document.getElementById(`step${currentStep}-content`).classList.remove('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.remove('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.add('completed');
+        
+        // Update step line
+        if (currentStep < 3) {
+            document.querySelectorAll('.step-line')[currentStep - 1].classList.add('active');
+        }
+        
+        currentStep++;
+        
+        // Show next step
+        document.getElementById(`step${currentStep}-content`).classList.add('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.add('active');
+    }
+
+    function prevStep() {
+        // Hide current step
+        document.getElementById(`step${currentStep}-content`).classList.remove('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.remove('active');
+        
+        // Update step line
+        if (currentStep > 1) {
+            document.querySelectorAll('.step-line')[currentStep - 2].classList.remove('active');
+        }
+        
+        currentStep--;
+        
+        // Show previous step
+        document.getElementById(`step${currentStep}-content`).classList.add('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.add('active');
+    }
+
+    function goToStep(step) {
+        while (currentStep > step) {
+            prevStep();
+        }
+        while (currentStep < step) {
+            nextStep();
+        }
+    }
+
+    // Modal functions
+    function openAddressModal(addressId = null) {
+        const modal = document.getElementById('addressModal');
+        const title = document.getElementById('modalTitle');
+        
+        if (addressId) {
+            // Edit mode
+            title.textContent = 'Edit Address';
+            const address = userAddresses.find(addr => addr.id === addressId);
+            if (address) {
+                document.getElementById('editAddressId').value = addressId;
+                document.getElementById('addressLabel').value = address.label;
+                document.getElementById('fullName').value = address.fullName;
+                document.getElementById('addressStreet').value = address.street;
+                document.getElementById('city').value = address.city;
+                document.getElementById('state').value = address.state;
+                document.getElementById('zipCode').value = address.zip;
+                document.getElementById('country').value = address.country;
+                document.getElementById('setDefault').checked = address.isDefault;
+            }
+        } else {
+            // Add mode
+            title.textContent = 'Add New Address';
+            document.getElementById('addressForm').reset();
+            document.getElementById('editAddressId').value = '';
+        }
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddressModal() {
+        const modal = document.getElementById('addressModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        document.getElementById('addressForm').reset();
+    }
+
+    function openPaymentModal(paymentId = null) {
+        const modal = document.getElementById('paymentModal');
+        const title = document.getElementById('paymentModalTitle');
+        
+        if (paymentId) {
+            // Edit mode
+            title.textContent = 'Edit Payment Method';
+            const payment = userPaymentMethods.find(pmt => pmt.id === paymentId);
+            if (payment) {
+                document.getElementById('editPaymentId').value = paymentId;
+                document.getElementById('cardNumber').value = payment.cardNumber;
+                document.getElementById('cardExpiry').value = payment.expiry;
+                document.getElementById('cardName').value = payment.cardName;
+                document.getElementById('setPaymentDefault').checked = payment.isDefault;
+            }
+        } else {
+            // Add mode
+            title.textContent = 'Add Payment Method';
+            document.getElementById('paymentForm').reset();
+            document.getElementById('editPaymentId').value = '';
+        }
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePaymentModal() {
+        const modal = document.getElementById('paymentModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        document.getElementById('paymentForm').reset();
+    }
+
+    // Load user addresses from Firebase
+    async function loadUserAddresses() {
+        const user = auth.currentUser;
+        if (!user) {
+            showToast('Please sign in to manage addresses', 'warning');
+            return;
+        }
+
+        try {
+            const addressesRef = db.collection('users').doc(user.uid).collection('addresses');
+            const snapshot = await addressesRef.get();
+            userAddresses = [];
+            
+            const addressList = document.getElementById('addressList');
+            addressList.innerHTML = '';
+
+            snapshot.forEach(doc => {
+                const address = { id: doc.id, ...doc.data() };
+                userAddresses.push(address);
+                
+                const addressElement = document.createElement('div');
+                addressElement.className = `p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    selectedAddress?.id === doc.id 
+                        ? 'border-primary bg-primary/5 shadow-sm' 
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`;
+                addressElement.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <input 
+                            type="radio" 
+                            name="address" 
+                            ${selectedAddress?.id === doc.id ? 'checked' : ''} 
+                            onchange="selectAddress('${doc.id}')" 
+                            class="mt-1 text-primary focus:ring-primary"
+                        >
+                        <div class="flex-1">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="font-semibold text-gray-900 dark:text-white">${address.label}</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${address.fullName}</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">${address.street}</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">${address.city}, ${address.state} ${address.zip}</p>
+                                </div>
+                                ${address.isDefault ? 
+                                    '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white">Default</span>' : 
+                                    ''
+                                }
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="event.stopPropagation(); openAddressModal('${doc.id}')" class="text-sm text-primary hover:text-primary/80 transition-colors">
+                                    Edit
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteAddress('${doc.id}')" class="text-sm text-red-500 hover:text-red-700 transition-colors">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                addressList.appendChild(addressElement);
+
+                if (address.isDefault && !selectedAddress) {
+                    selectAddress(doc.id);
+                }
+            });
+
+            if (snapshot.empty) {
+                addressList.innerHTML = `
+                    <div class="text-center py-8">
+                        <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">location_off</span>
+                        <p class="text-gray-500">No saved addresses</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading addresses:', error);
+            showToast('Error loading addresses', 'error');
+        }
+    }
+
+    // Load user payment methods from Firebase
+    async function loadUserPaymentMethods() {
+        const user = auth.currentUser;
+        if (!user) {
+            showToast('Please sign in to manage payment methods', 'warning');
+            return;
+        }
+
+        try {
+            const paymentsRef = db.collection('users').doc(user.uid).collection('payments');
+            const snapshot = await paymentsRef.get();
+            userPaymentMethods = [];
+            
+            const paymentMethodsList = document.getElementById('paymentMethodsList');
+            paymentMethodsList.innerHTML = '';
+
+            snapshot.forEach(doc => {
+                const payment = { id: doc.id, ...doc.data() };
+                userPaymentMethods.push(payment);
+                
+                const paymentElement = document.createElement('div');
+                paymentElement.className = `p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                    selectedPaymentMethod?.id === doc.id 
+                        ? 'border-primary bg-primary/5 shadow-sm' 
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`;
+                paymentElement.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <input 
+                            type="radio" 
+                            name="paymentMethod" 
+                            ${selectedPaymentMethod?.id === doc.id ? 'checked' : ''} 
+                            onchange="selectPaymentMethod('${doc.id}')" 
+                            class="mt-1 text-primary focus:ring-primary"
+                        >
+                        <div class="flex-1">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-4">
+                                    <img src="${getCardLogo(payment.cardType)}" alt="${payment.cardType}" class="h-8">
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">${payment.cardType} **** ${payment.last4}</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Expires ${payment.expiry}</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">${payment.cardName}</p>
+                                    </div>
+                                </div>
+                                ${payment.isDefault ? 
+                                    '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white">Default</span>' : 
+                                    ''
+                                }
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="event.stopPropagation(); openPaymentModal('${doc.id}')" class="text-sm text-primary hover:text-primary/80 transition-colors">
+                                    Edit
+                                </button>
+                                <button onclick="event.stopPropagation(); deletePaymentMethod('${doc.id}')" class="text-sm text-red-500 hover:text-red-700 transition-colors">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                paymentMethodsList.appendChild(paymentElement);
+
+                if (payment.isDefault && !selectedPaymentMethod) {
+                    selectPaymentMethod(doc.id);
+                }
+            });
+
+            if (snapshot.empty) {
+                paymentMethodsList.innerHTML = `
+                    <div class="text-center py-8">
+                        <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">credit_card_off</span>
+                        <p class="text-gray-500">No saved payment methods</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading payment methods:', error);
+            showToast('Error loading payment methods', 'error');
+        }
+    }
+
+    // Get card logo based on card type
+    function getCardLogo(cardType) {
+        const logos = {
+            'Visa': 'https://lh3.googleusercontent.com/aida-public/AB6AXuC5nP4B2z1axJU5cJPt7sr1bosUEcpEygs1Dn-GBc1ZrcfqPmDGlmGxskN8_0-pqyW0RRKTk1rItZeptObjdnqb9RL0U-Vk0KAh4SO-L2sKw0sB8hvlQu3cmTgPLAxdJIknFLCSdljxctnk_vJrG_S1qIPhd7BfxAvKKQU5XFaEzCMEHSI9webzD5h9KRbgpKYst9W9QsKRPxSOX4z-LpxNccsnxQGDmcJuHXWXvIzb1mIGn1Q4C7ftxTB0sx3cnG0rmSnOShDtgBM8',
+            'Mastercard': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGQ95Rd0MtoZn3L7lYF3XNArbTU2aDvd7UunR81vWH_vXTMH4n8R70VnWIVqhwEXa9AHUm_1dvt9WTbJKooZDCM4EPPFHay4SzA75hueVhjOtU5xouBTghbvIacw4M17lrjl1By8VIBsgyZ3T3b55vu52cwJBDulRlVz7yDASEYBcr2lRhxB9xVq7WvW5qyPLd1YObh699U5OVzY7gDKEGSArP38Gi91wYL-abafz-V7-kX3XEo3Jl9pOT4F2Ym3BhGg8HK8znSkNy',
+            'Amex': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/American_Express_logo_%282018%29.svg/800px-American_Express_logo_%282018%29.svg.png',
+            'Discover': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Discover_Card_logo.svg/800px-Discover_Card_logo.svg.png'
+        };
+        return logos[cardType] || logos['Visa'];
+    }
+
+    // Address management
+    function selectAddress(addressId) {
+        selectedAddress = userAddresses.find(addr => addr.id === addressId);
+        updateSelectedAddressDisplay();
+        loadUserAddresses(); // Refresh to update UI
+    }
+
+    function updateSelectedAddressDisplay() {
+        if (selectedAddress) {
+            document.getElementById('selectedAddress').innerHTML = `
+                <p class="font-medium text-gray-900 dark:text-white">${selectedAddress.label}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${selectedAddress.fullName}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">${selectedAddress.street}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">${selectedAddress.city}, ${selectedAddress.state} ${selectedAddress.zip}</p>
+            `;
+        }
+    }
+
+    async function deleteAddress(addressId) {
+        if (!confirm('Are you sure you want to delete this address?')) return;
+        
+        const user = auth.currentUser;
+        if (!user) return;
+
+        try {
+            await db.collection('users').doc(user.uid).collection('addresses').doc(addressId).delete();
+            showToast('Address deleted successfully', 'success');
+            if (selectedAddress?.id === addressId) {
+                selectedAddress = null;
+            }
+            await loadUserAddresses();
+        } catch (error) {
+            console.error('Error deleting address:', error);
+            showToast('Error deleting address', 'error');
+        }
+    }
+
+    // Payment method management
+    function selectPaymentMethod(paymentId) {
+        selectedPaymentMethod = userPaymentMethods.find(pmt => pmt.id === paymentId);
+        updateSelectedPaymentDisplay();
+        loadUserPaymentMethods(); // Refresh to update UI
+    }
+
+    function updateSelectedPaymentDisplay() {
+        if (selectedPaymentMethod) {
+            document.getElementById('selectedPayment').innerHTML = `
+                <div class="flex items-center gap-3">
+                    <img src="${getCardLogo(selectedPaymentMethod.cardType)}" alt="${selectedPaymentMethod.cardType}" class="h-6">
+                    <div>
+                        <p class="font-medium text-gray-900 dark:text-white">${selectedPaymentMethod.cardType} **** ${selectedPaymentMethod.last4}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Expires ${selectedPaymentMethod.expiry}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">${selectedPaymentMethod.cardName}</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async function deletePaymentMethod(paymentId) {
+        if (!confirm('Are you sure you want to delete this payment method?')) return;
+        
+        const user = auth.currentUser;
+        if (!user) return;
+
+        try {
+            await db.collection('users').doc(user.uid).collection('payments').doc(paymentId).delete();
+            showToast('Payment method deleted successfully', 'success');
+            if (selectedPaymentMethod?.id === paymentId) {
+                selectedPaymentMethod = null;
+            }
+            await loadUserPaymentMethods();
+        } catch (error) {
+            console.error('Error deleting payment method:', error);
+            showToast('Error deleting payment method', 'error');
+        }
+    }
+
+    // Generate order number
+    function generateOrderNumber() {
+        return 'GG-' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
+    }
+
+    // Place order with Firebase integration
+    async function placeOrder() {
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        if (cart.length === 0) {
+            showToast('Your cart is empty', 'error');
+            return;
+        }
+
+        if (!selectedAddress) {
+            showToast('Please select a delivery address', 'error');
+            return;
+        }
+
+        if (!selectedPaymentMethod) {
+            showToast('Please select a payment method', 'error');
+            return;
+        }
+
+        const user = auth.currentUser;
+        if (!user) {
+            showToast('Please sign in to place an order', 'error');
+            return;
+        }
+
+        try {
+            // Calculate order totals
+            const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+            const delivery = 5.00;
+            const taxes = subtotal * 0.08;
+            const total = subtotal + delivery + taxes;
+
+            const orderData = {
+                userId: user.uid,
+                userEmail: user.email,
+                items: cart,
+                address: selectedAddress,
+                payment: selectedPaymentMethod,
+                subtotal: subtotal,
+                delivery: delivery,
+                taxes: taxes,
+                total: total,
+                status: 'confirmed',
+                orderNumber: generateOrderNumber(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                estimatedDelivery: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Tomorrow
+            };
+
+            // Save order to Firebase
+            const orderRef = await db.collection('users').doc(user.uid).collection('orders').add(orderData);
+            const orderId = orderRef.id;
+            
+            // Clear cart after successful order
+            localStorage.removeItem('cart');
+            updateCartUI();
+            
+            showToast('Order placed successfully!', 'success');
+            
+            // Redirect to order confirmation with order ID
+            setTimeout(() => {
+                window.location.href = `order-confirmation.html?orderId=${orderId}`;
+            }, 1500);
+
+        } catch (error) {
+            console.error('Error placing order:', error);
+            showToast('Error placing order. Please try again.', 'error');
+        }
+    }
+
+    // Mobile Menu Functionality
+    function openMenu() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        mobileMenu.classList.add('open');
+        menuOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        mobileMenu.classList.remove('open');
+        menuOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    // Initialize
+    function init() {
+        // Mobile menu event listeners
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        if (menuBtn) menuBtn.addEventListener('click', openMenu);
+        if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
+        if (menuOverlay) menuOverlay.addEventListener('click', closeMenu);
+
+        // Calculate initial totals
+        calculateCartTotals();
+        updateCartUI();
+
+        // Load user data if signed in
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                loadUserAddresses();
+                loadUserPaymentMethods();
+            }
+        });
+
+        // Address form submission
+        document.getElementById('addressForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user) {
+                showToast('Please sign in to save addresses', 'error');
+                return;
+            }
+
+            const addressId = document.getElementById('editAddressId').value;
+            const addressData = {
+                label: document.getElementById('addressLabel').value,
+                fullName: document.getElementById('fullName').value,
+                street: document.getElementById('addressStreet').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                zip: document.getElementById('zipCode').value,
+                country: document.getElementById('country').value,
+                isDefault: document.getElementById('setDefault').checked,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                if (addressId) {
+                    // Update existing address
+                    await db.collection('users').doc(user.uid).collection('addresses').doc(addressId).update(addressData);
+                    showToast('Address updated successfully!', 'success');
+                } else {
+                    // Add new address
+                    addressData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    const addressRef = await db.collection('users').doc(user.uid).collection('addresses').add(addressData);
+                    showToast('Address saved successfully!', 'success');
+                    
+                    // Select the new address if it's set as default
+                    if (addressData.isDefault) {
+                        selectAddress(addressRef.id);
+                    }
+                }
+                
+                closeAddressModal();
+                await loadUserAddresses();
+            } catch (error) {
+                console.error('Error saving address:', error);
+                showToast('Error saving address', 'error');
+            }
+        });
+
+        // Payment form submission
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user) {
+                showToast('Please sign in to save payment methods', 'error');
+                return;
+            }
+
+            const paymentId = document.getElementById('editPaymentId').value;
+            const cardNumber = document.getElementById('cardNumber').value;
+            const cleanCardNumber = cardNumber.replace(/\s/g, '');
+            const last4 = cleanCardNumber.slice(-4);
+            const cardType = getCardType(cleanCardNumber);
+
+            const paymentData = {
+                cardNumber: cleanCardNumber,
+                last4: last4,
+                cardType: cardType,
+                expiry: document.getElementById('cardExpiry').value,
+                cardName: document.getElementById('cardName').value,
+                isDefault: document.getElementById('setPaymentDefault').checked,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                if (paymentId) {
+                    // Update existing payment
+                    await db.collection('users').doc(user.uid).collection('payments').doc(paymentId).update(paymentData);
+                    showToast('Payment method updated successfully!', 'success');
+                } else {
+                    // Add new payment
+                    paymentData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    const paymentRef = await db.collection('users').doc(user.uid).collection('payments').add(paymentData);
+                    showToast('Payment method saved successfully!', 'success');
+                    
+                    // Select the new payment if it's set as default
+                    if (paymentData.isDefault) {
+                        selectPaymentMethod(paymentRef.id);
+                    }
+                }
+                
+                closePaymentModal();
+                await loadUserPaymentMethods();
+            } catch (error) {
+                console.error('Error saving payment method:', error);
+                showToast('Error saving payment method', 'error');
+            }
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('addressModal').addEventListener('click', (e) => {
+            if (e.target.id === 'addressModal') {
+                closeAddressModal();
+            }
+        });
+
+        document.getElementById('paymentModal').addEventListener('click', (e) => {
+            if (e.target.id === 'paymentModal') {
+                closePaymentModal();
+            }
+        });
+
+        // Set default payment method
+        function getCardType(cardNumber) {
+            const cardPatterns = {
+                'Visa': /^4/,
+                'Mastercard': /^5[1-5]/,
+                'Amex': /^3[47]/,
+                'Discover': /^6(?:011|5)/
+            };
+            
+            for (const [cardType, pattern] of Object.entries(cardPatterns)) {
+                if (pattern.test(cardNumber)) {
+                    return cardType;
+                }
+            }
+            return 'Visa';
+        }
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

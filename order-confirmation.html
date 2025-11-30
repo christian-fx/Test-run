@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Order Confirmation - Grocery Go</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet"/>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4CAF50",
+                        "background-light": "#F4F4F4",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        
+        .menu-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Confirmation Animation */
+        @keyframes confetti {
+            0% { transform: translateY(0) rotate(0); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #4CAF50;
+            animation: confetti 2s ease-in-out forwards;
+        }
+        
+        /* Success Checkmark */
+        .checkmark__circle {
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            stroke-width: 2;
+            stroke-miterlimit: 10;
+            stroke: #4CAF50;
+            fill: none;
+            animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+        
+        .checkmark {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: block;
+            stroke-width: 2;
+            stroke: #fff;
+            stroke-miterlimit: 10;
+            margin: 0 auto;
+            box-shadow: inset 0px 0px 0px #4CAF50;
+            animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+        }
+        
+        .checkmark__check {
+            transform-origin: 50% 50%;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+        }
+        
+        @keyframes stroke {
+            100% { stroke-dashoffset: 0; }
+        }
+        
+        @keyframes scale {
+            0%, 100% { transform: none; }
+            50% { transform: scale3d(1.1, 1.1, 1); }
+        }
+        
+        @keyframes fill {
+            100% { box-shadow: inset 0px 0px 0px 40px #4CAF50; }
+        }
+        
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        /* Gradient Background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#333333] dark:text-gray-200">
+    <div id="confettiContainer"></div>
+
+    <div class="menu-overlay fixed inset-0 bg-black/50 z-40 lg:hidden" id="menuOverlay"></div>
+    
+    <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-xl z-50 p-6 lg:hidden" id="mobileMenu">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-bold">Menu</h2>
+            <button class="text-2xl" id="closeMenuBtn">×</button>
+        </div>
+        <nav class="space-y-4">
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="products.html">Shop</a>
+            <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#">Deals</a>
+        </nav>
+        <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex gap-2">
+                <button class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='profile.html'">
+                    <span class="material-symbols-outlined">person</span>
+                </button>
+                <button class="relative flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='cart.html'">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <div class="cart-count absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">0</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+        <header class="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm font-display">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-700 py-4">
+                    <div class="flex items-center gap-8">
+                        <button class="lg:hidden text-2xl" id="menuBtn">☰</button>
+                        
+                        <div class="flex items-center gap-3 text-primary">
+                            <h2 class="text-gray-800 dark:text-white text-xl font-bold tracking-tight">Grocery Go</h2>
+                        </div>
+                        <nav class="hidden md:flex items-center gap-8">
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="index.html">Home</a>
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="products.html">Shop</a>
+                            <a class="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary text-sm font-medium" href="#">Deals</a>
+                        </nav>
+                    </div>
+                    <div class="flex flex-1 justify-end items-center gap-4">
+                        <div class="flex gap-2">
+                            <button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='profile.html'">
+                                <span class="material-symbols-outlined">person</span>
+                            </button>
+                            <button class="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" onclick="window.location.href='cart.html'">
+                                <span class="material-symbols-outlined">shopping_cart</span>
+                                <div class="cart-count absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">0</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow">
+            <section class="gradient-bg text-white py-16">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="max-w-4xl mx-auto text-center">
+                        <div class="floating mb-8">
+                            <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-4xl md:text-5xl font-black mb-4">Order Confirmed!</h1>
+                        <p class="text-xl opacity-90 mb-2">Thank you for your purchase</p>
+                        <p class="opacity-80">Your order <span id="orderNumber" class="font-semibold">#GG-</span> is being processed</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-12">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 mb-8">
+                            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+                                <div>
+                                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Order Summary</h2>
+                                    <div class="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <div>
+                                            <span class="font-medium">Order ID:</span>
+                                            <span id="orderIdDisplay">#GG-</span>
+                                        </div>
+                                        <div>
+                                            <span class="font-medium">Date:</span>
+                                            <span id="orderDate">Just now</span>
+                                        </div>
+                                        <div>
+                                            <span class="font-medium">Status:</span>
+                                            <span class="text-green-600 font-semibold">Confirmed</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 lg:mt-0">
+                                    <button onclick="printOrder()" class="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <span class="material-symbols-outlined">print</span>
+                                        Print Receipt
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Items Ordered</h3>
+                                <div id="orderItems" class="space-y-4">
+                                    </div>
+                            </div>
+
+                            <div class="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8">
+                                <div class="max-w-md ml-auto space-y-3">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
+                                        <span class="text-gray-900 dark:text-white" id="subtotal">$0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">Delivery Fee</span>
+                                        <span class="text-gray-900 dark:text-white" id="delivery">$5.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">Tax</span>
+                                        <span class="text-gray-900 dark:text-white" id="tax">$0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-lg font-bold pt-3 border-t border-gray-200 dark:border-gray-700">
+                                        <span class="text-gray-900 dark:text-white">Total</span>
+                                        <span class="text-gray-900 dark:text-white" id="total">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-green-600 dark:text-green-400">local_shipping</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Delivery Information</h3>
+                                </div>
+                                <div id="deliveryInfo" class="space-y-3">
+                                    </div>
+                                <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                    <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                                        <span class="material-symbols-outlined">schedule</span>
+                                        <span class="font-medium">Estimated Delivery</span>
+                                    </div>
+                                    <p class="text-blue-600 dark:text-blue-400 mt-1" id="deliveryEstimate">Tomorrow, 2:00 PM - 4:00 PM</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">payments</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Payment Information</h3>
+                                </div>
+                                <div id="paymentInfo" class="space-y-3">
+                                    </div>
+                                <div class="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                    <div class="flex items-center gap-2 text-green-700 dark:text-green-300">
+                                        <span class="material-symbols-outlined">check_circle</span>
+                                        <span class="font-medium">Payment Successful</span>
+                                    </div>
+                                    <p class="text-green-600 dark:text-green-400 mt-1">Your payment has been processed successfully</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 mt-8">
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">What's Next?</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="text-center p-6">
+                                    <div class="w-16 h-16 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="material-symbols-outlined text-orange-600 dark:text-orange-400">package</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Order Processing</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">We're preparing your items for delivery</p>
+                                </div>
+                                <div class="text-center p-6">
+                                    <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">local_shipping</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-2">On the Way</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Your driver will deliver within the estimated time</p>
+                                </div>
+                                <div class="text-center p-6">
+                                    <div class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span class="material-symbols-outlined text-green-600 dark:text-green-400">task_alt</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Delivery Complete</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Enjoy your fresh groceries!</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+                            <button onclick="trackOrder()" class="bg-primary text-white font-bold py-4 px-8 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">map</span>
+                                Track Your Order
+                            </button>
+                            <button onclick="continueShopping()" class="border-2 border-primary text-primary font-bold py-4 px-8 rounded-xl hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">shopping_bag</span>
+                                Continue Shopping
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-12">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                    <div class="col-span-2 lg:col-span-1">
+                        <div class="flex items-center gap-3 text-primary">
+                            <h2 class="text-gray-800 dark:text-white text-xl font-bold">Grocery Go</h2>
+                        </div>
+                        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">Your daily dose of fresh.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white">Company</h4>
+                        <ul class="mt-4 space-y-2 text-sm">
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">About Us</a></li>
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">Careers</a></li>
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">Press</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white">Customer Service</h4>
+                        <ul class="mt-4 space-y-2 text-sm">
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">Contact Us</a></li>
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">FAQs</a></li>
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">Shipping &amp; Returns</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white">Legal</h4>
+                        <ul class="mt-4 space-y-2 text-sm">
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">Terms of Service</a></li>
+                            <li><a class="text-gray-600 dark:text-gray-300 hover:text-primary" href="#">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white">Follow Us</h4>
+                        <div class="mt-4 flex space-x-4">
+                            <a class="text-gray-500 dark:text-gray-400 hover:text-primary" href="#"><svg aria-hidden="true" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" fill-rule="evenodd"></path></svg></a>
+                            <a class="text-gray-500 dark:text-gray-400 hover:text-primary" href="#"><svg aria-hidden="true" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg></a>
+                            <a class="text-gray-500 dark:text-gray-400 hover:text-primary" href="#"><svg aria-hidden="true" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.416 2.427.048 1.024.06 1.378.06 3.808s-.012 2.784-.06 3.808c-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.024.048-1.378.06-3.808.06s-2.784-.013-3.808-.06c-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.048-1.024-.06-1.378-.06-3.808s.012-2.784.06-3.808c.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 016.345 2.525c.636-.247 1.363-.416 2.427-.465C9.793 2.013 10.147 2 12.315 2zm-1.002 6.363a4.733 4.733 0 100 9.467 4.733 4.733 0 000-9.467zM12 15.433a3.433 3.433 0 110-6.866 3.433 3.433 0 010 6.866zm4.578-9.49a1.144 1.144 0 100 2.288 1.144 1.144 0 000-2.288z" fill-rule="evenodd"></path></svg></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p>© 2024 Grocery Go. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+<script src="config.js"></script>
+<script>
+    // Order data
+    let orderData = null;
+
+    // Create confetti effect
+    function createConfetti() {
+        const container = document.getElementById('confettiContainer');
+        const colors = ['#4CAF50', '#45a049', '#66bb6a', '#81c784'];
+        
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.animationDelay = Math.random() * 2 + 's';
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.width = Math.random() * 10 + 5 + 'px';
+            confetti.style.height = Math.random() * 10 + 5 + 'px';
+            container.appendChild(confetti);
+            
+            // Remove confetti after animation
+            setTimeout(() => {
+                confetti.remove();
+            }, 2000);
+        }
+    }
+
+    // Format currency
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(amount);
+    }
+
+    // Generate order number
+    function generateOrderNumber() {
+        return 'GG-' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
+    }
+
+    // Format date
+    function formatDate(date) {
+        return new Date(date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Calculate delivery estimate
+    function getDeliveryEstimate() {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(14, 0, 0, 0);
+        
+        const options = { 
+            weekday: 'long', 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        };
+        
+        const startTime = tomorrow.toLocaleTimeString('en-US', options);
+        const endTime = new Date(tomorrow.getTime() + 2 * 60 * 60 * 1000).toLocaleTimeString('en-US', options);
+        
+        return `Tomorrow, ${startTime} - ${endTime}`;
+    }
+
+    // Load order data from Firebase
+    async function loadOrderData(user) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        
+        // Ensure we have an order ID and a logged-in user before checking specific user path
+        if (orderId && user) {
+            try {
+                // CHANGED: Query path updated to users/{uid}/orders/{orderId}
+                const orderDoc = await db.collection('users')
+                                       .doc(user.uid)
+                                       .collection('orders')
+                                       .doc(orderId)
+                                       .get();
+                                       
+                if (orderDoc.exists) {
+                    orderData = orderDoc.data();
+                    orderData.id = orderId;
+                    displayOrderData();
+                    
+                    // Clear cart after successful order
+                    clearCartAfterOrder();
+                } else {
+                    console.log('Order not found in user collection, checking demo/fallback');
+                    // Fallback to demo data only if not found
+                    createDemoOrder();
+                }
+            } catch (error) {
+                console.error('Error loading order from Firestore:', error);
+                createDemoOrder();
+            }
+        } else {
+            // Check if we have order data in session storage (from checkout)
+            const sessionOrder = sessionStorage.getItem('lastOrder');
+            if (sessionOrder) {
+                orderData = JSON.parse(sessionOrder);
+                displayOrderData();
+                clearCartAfterOrder();
+            } else {
+                // Create demo order for preview
+                createDemoOrder();
+            }
+        }
+    }
+
+    // Clear cart after successful order
+    function clearCartAfterOrder() {
+        cart = [];
+        updateCartStorage();
+        updateCartUI();
+        sessionStorage.removeItem('lastOrder');
+    }
+
+    // Create demo order data (fallback)
+    function createDemoOrder() {
+        const currentCart = JSON.parse(localStorage.getItem('cart')) || [];
+        if (currentCart.length === 0) {
+            // Fallback demo items
+            currentCart.push(
+                { id: 1, name: "Organic Bananas", price: 1.29, quantity: 2, image: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&h=300&fit=crop" },
+                { id: 2, name: "Fresh Avocados", price: 2.49, quantity: 3, image: "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=400&h=300&fit=crop" },
+                { id: 3, name: "Organic Spinach", price: 3.99, quantity: 1, image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400&h=300&fit=crop" }
+            );
+        }
+
+        const subtotal = currentCart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        const delivery = 5.00;
+        const tax = subtotal * 0.08;
+
+        orderData = {
+            id: generateOrderNumber(),
+            items: currentCart,
+            address: {
+                fullName: "John Doe",
+                address1: "123 Main Street",
+                address2: "Apt 4B",
+                city: "New York",
+                state: "NY",
+                zipCode: "10001",
+                phone: "(555) 123-4567"
+            },
+            payment: {
+                cardholderName: "John Doe",
+                cardNumber: "4242",
+                method: "Credit Card"
+            },
+            subtotal: subtotal,
+            delivery: delivery,
+            taxes: tax,
+            total: subtotal + delivery + tax,
+            createdAt: new Date().toISOString(),
+            status: "confirmed"
+        };
+
+        displayOrderData();
+    }
+
+    // Display order data
+    function displayOrderData() {
+        if (!orderData) return;
+
+        // Set order number and date
+        document.getElementById('orderNumber').textContent = orderData.orderNumber || orderData.id; // Support both naming conventions
+        document.getElementById('orderIdDisplay').textContent = orderData.orderNumber || orderData.id;
+        
+        // Handle timestamp formatting safely
+        const dateStr = orderData.createdAt ? 
+            (orderData.createdAt.toDate ? orderData.createdAt.toDate() : orderData.createdAt) 
+            : new Date();
+        document.getElementById('orderDate').textContent = formatDate(dateStr);
+        
+        document.getElementById('deliveryEstimate').textContent = getDeliveryEstimate();
+
+        // Display order items
+        const orderItemsContainer = document.getElementById('orderItems');
+        orderItemsContainer.innerHTML = orderData.items.map(item => `
+            <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <img src="${item.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop'}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg">
+                <div class="flex-1">
+                    <h4 class="font-semibold text-gray-900 dark:text-white">${item.name}</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Qty: ${item.quantity}</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-semibold text-gray-900 dark:text-white">${formatCurrency(item.price * item.quantity)}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">${formatCurrency(item.price)} each</p>
+                </div>
+            </div>
+        `).join('');
+
+        // Display totals
+        document.getElementById('subtotal').textContent = formatCurrency(orderData.subtotal || 0);
+        document.getElementById('delivery').textContent = formatCurrency(orderData.delivery || 5.00);
+        document.getElementById('tax').textContent = formatCurrency(orderData.taxes || orderData.tax || 0);
+        document.getElementById('total').textContent = formatCurrency(orderData.total || 0);
+
+        // Display delivery info
+        const deliveryInfo = document.getElementById('deliveryInfo');
+        if (orderData.address) {
+            deliveryInfo.innerHTML = `
+                <div>
+                    <p class="font-medium text-gray-900 dark:text-white">${orderData.address.fullName}</p>
+                    <p class="text-gray-600 dark:text-gray-400">${orderData.address.address1 || orderData.address.street}</p>
+                    ${orderData.address.address2 ? `<p class="text-gray-600 dark:text-gray-400">${orderData.address.address2}</p>` : ''}
+                    <p class="text-gray-600 dark:text-gray-400">${orderData.address.city}, ${orderData.address.state} ${orderData.address.zipCode || orderData.address.zip}</p>
+                    <p class="text-gray-600 dark:text-gray-400">${orderData.address.phone || ''}</p>
+                </div>
+            `;
+        } else {
+            deliveryInfo.innerHTML = `<p class="text-gray-600 dark:text-gray-400">Delivery information not available</p>`;
+        }
+
+        // Display payment info
+        const paymentInfo = document.getElementById('paymentInfo');
+        if (orderData.payment) {
+            paymentInfo.innerHTML = `
+                <div>
+                    <p class="font-medium text-gray-900 dark:text-white">${orderData.payment.cardholderName || orderData.payment.cardName || 'Customer'}</p>
+                    <p class="text-gray-600 dark:text-gray-400">${orderData.payment.method || orderData.payment.cardType || 'Payment Method'}</p>
+                    ${orderData.payment.cardNumber || orderData.payment.last4 ? `<p class="text-gray-600 dark:text-gray-400">ending in ${orderData.payment.last4 || orderData.payment.cardNumber.slice(-4)}</p>` : ''}
+                </div>
+            `;
+        } else {
+            paymentInfo.innerHTML = `<p class="text-gray-600 dark:text-gray-400">Payment information not available</p>`;
+        }
+    }
+
+    // Action functions
+    function printOrder() {
+        window.print();
+    }
+
+    function trackOrder() {
+        showToast('Tracking page coming soon!', 'info');
+        // In a real app, this would navigate to the tracking page
+    }
+
+    function continueShopping() {
+        window.location.href = 'products.html';
+    }
+
+    // Toast functionality
+    function showToast(message, type = 'success') {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white font-medium ${
+            type === 'success' ? 'bg-green-500' :
+            type === 'error' ? 'bg-red-500' :
+            type === 'warning' ? 'bg-orange-500' : 'bg-blue-500'
+        }`;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Mobile Menu Functionality
+    function openMenu() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        mobileMenu.classList.add('open');
+        menuOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        mobileMenu.classList.remove('open');
+        menuOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    // Initialize
+    function init() {
+        // Mobile menu event listeners
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        if (menuBtn) menuBtn.addEventListener('click', openMenu);
+        if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
+        if (menuOverlay) menuOverlay.addEventListener('click', closeMenu);
+
+        // CHANGED: Wait for Auth state to confirm before loading order data
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // If logged in, pass user to loadOrderData
+                loadOrderData(user);
+            } else {
+                // If not logged in, pass null (will trigger demo/fallback)
+                loadOrderData(null);
+            }
+        });
+
+        // Create confetti effect
+        setTimeout(createConfetti, 500);
+        
+        // Cart UI is already handled by config.js
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

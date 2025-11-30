@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Contact Us - Grocery Go</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    
+    <!-- Firebase & EmailJS -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <script src="config.js"></script>
+
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Mobile Menu Styles */
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        
+        .menu-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Hamburger Animation */
+        .hamburger-line {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .hamburger.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .hamburger.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+    <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+        
+        <!-- Mobile Menu Overlay -->
+        <div class="menu-overlay fixed inset-0 bg-black/50 z-40" id="menuOverlay"></div>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-slate-900 shadow-xl z-50 p-6" id="mobileMenu">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-bold">Menu</h2>
+                <button class="hamburger active" id="closeMenuBtn">
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="products.html">Shop</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html#deals">Deals</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2 text-primary" href="contact.html">Contact</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="help.html">Help</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#" id="mobileAuthBtn">Login/Signup</a>
+            </nav>
+        </div>
+
+        <div class="layout-container flex h-full grow flex-col">
+            <!-- Header (Matches Index) -->
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-3 sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+                <div class="flex items-center gap-8">
+                    <!-- Mobile Menu Button -->
+                    <button class="lg:hidden hamburger flex flex-col" id="menuBtn">
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                    </button>
+                    
+                    <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50">
+                        <h2 class="text-xl font-bold tracking-tight" onclick="window.location.href='index.html'" style="cursor: pointer;">Grocery Go</h2>
+                    </div>
+                    <nav class="hidden lg:flex items-center gap-9">
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="index.html">Home</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="products.html">Shop</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="help.html">Help</a>
+                        <a class="text-sm font-bold text-primary transition-colors" href="contact.html">Contact</a>
+                    </nav>
+                </div>
+                <div class="flex flex-1 justify-end items-center gap-2 sm:gap-4">
+                    <div class="flex gap-2">
+                        <!-- Auth Button -->
+                        <button id="authBtn" class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-2 text-sm font-bold min-w-0 transition-colors" onclick="window.location.href='authpages.html'">
+                            <span class="material-symbols-outlined">login</span>
+                        </button>
+                        
+                        <!-- Profile Button -->
+                        <button id="profileBtn" style="display: none;" class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-2 text-sm font-bold min-w-0 transition-colors" onclick="window.location.href='profile.html'">
+                            <span class="material-symbols-outlined">person</span>
+                        </button>
+                        
+                        <!-- Cart Button -->
+                        <button class="relative flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-2 text-sm font-bold min-w-0 transition-colors" onclick="window.location.href='cart.html'">
+                            <span class="material-symbols-outlined">shopping_cart</span>
+                            <span class="cart-count absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-slate-900 text-xs font-bold">0</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-10">
+                <div class="max-w-6xl mx-auto flex flex-col gap-10">
+                    
+                    <!-- Page Heading -->
+                    <div class="flex flex-col gap-3 text-center md:text-left">
+                        <h1 class="text-slate-900 dark:text-slate-50 text-4xl font-black leading-tight tracking-tight">Get in Touch</h1>
+                        <p class="text-slate-600 dark:text-slate-400 text-lg font-normal">We'd love to hear from you. Reach out with any questions, feedback, or just to say hello.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-10">
+                        <!-- Left Column: Contact Info -->
+                        <div class="lg:col-span-2 flex flex-col gap-6">
+                            <div class="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-6">Contact Information</h2>
+                                <div class="flex flex-col gap-6">
+                                    <!-- Phone -->
+                                    <div class="flex items-start gap-4">
+                                        <div class="bg-primary/10 text-primary p-3 rounded-xl">
+                                            <span class="material-symbols-outlined">call</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 dark:text-white">Phone Support</p>
+                                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-1">Mon-Fri 9am-6pm</p>
+                                            <a href="tel:+18005554762" class="text-primary hover:underline font-medium">+1 (800) 555-GROC</a>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Email -->
+                                    <div class="flex items-start gap-4">
+                                        <div class="bg-primary/10 text-primary p-3 rounded-xl">
+                                            <span class="material-symbols-outlined">mail</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 dark:text-white">Email</p>
+                                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-1">Response within 24h</p>
+                                            <a href="mailto:support@grocerygo.com" class="text-primary hover:underline font-medium">support@grocerygo.com</a>
+                                        </div>
+                                    </div>
+
+                                    <!-- Location -->
+                                    <div class="flex items-start gap-4">
+                                        <div class="bg-primary/10 text-primary p-3 rounded-xl">
+                                            <span class="material-symbols-outlined">location_on</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-slate-900 dark:text-white">Headquarters</p>
+                                            <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">
+                                                123 Fresh Produce Lane<br>
+                                                Green Valley, CA 90210
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Form -->
+                        <div class="lg:col-span-3">
+                            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 sm:p-8">
+                                <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-6">Send us a Message</h2>
+                                <form id="contactForm" class="flex flex-col gap-5">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                        <div class="flex flex-col gap-2">
+                                            <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="name">Full Name</label>
+                                            <input class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all" id="name" name="name" placeholder="John Doe" type="text" required/>
+                                        </div>
+                                        <div class="flex flex-col gap-2">
+                                            <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="email">Email Address</label>
+                                            <input class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all" id="email" name="email" placeholder="you@example.com" type="email" required/>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="subject">Subject</label>
+                                        <input class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all" id="subject" name="subject" placeholder="Order Inquiry" type="text" required/>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="message">Message</label>
+                                        <textarea class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-h-[150px]" id="message" name="message" placeholder="How can we help you?" required></textarea>
+                                    </div>
+                                    <button class="mt-2 w-full bg-primary text-slate-900 font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all transform active:scale-[0.98] shadow-lg shadow-primary/20" type="submit">
+                                        Send Message
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map & Hours -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center pt-8 border-t border-slate-200 dark:border-slate-800">
+                        <div class="w-full h-80 lg:h-96 rounded-2xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-800">
+                            <iframe class="w-full h-full border-0" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3305.748375837654!2d-118.3444996847819!3d34.09351998060677!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c2bf33d6b2c2a5%3A0x1c3d18e5f29f45a!2sHollywood%2C%20Los%20Angeles%2C%20CA!5e0!3m2!1sen!2sus!4v1678886400000" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">schedule</span>
+                                Store Hours
+                            </h3>
+                            <ul class="space-y-4">
+                                <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+                                    <span class="text-slate-600 dark:text-slate-400">Monday - Thursday</span>
+                                    <span class="font-bold text-slate-900 dark:text-slate-200">8:00 AM – 9:00 PM</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+                                    <span class="text-slate-600 dark:text-slate-400">Friday</span>
+                                    <span class="font-bold text-slate-900 dark:text-slate-200">8:00 AM – 10:00 PM</span>
+                                </li>
+                                <li class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+                                    <span class="text-slate-600 dark:text-slate-400">Saturday</span>
+                                    <span class="font-bold text-slate-900 dark:text-slate-200">9:00 AM – 10:00 PM</span>
+                                </li>
+                                <li class="flex justify-between items-center">
+                                    <span class="text-slate-600 dark:text-slate-400">Sunday</span>
+                                    <span class="font-bold text-slate-900 dark:text-slate-200">9:00 AM – 8:00 PM</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+            <!-- Footer (Matches Index) -->
+            <footer class="bg-slate-100 dark:bg-slate-900/50 mt-16 border-t border-slate-200 dark:border-slate-800">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-12">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                        <div class="col-span-2 lg:col-span-1">
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 mb-4">
+                                <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">Your one-stop shop for the freshest groceries, delivered with care.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Customer Service</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="help.html">Help Center</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="contact.html">Contact Us</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Returns &amp; Refunds</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">About Us</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Our Story</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Careers</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Press</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Legal</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Terms of Service</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Privacy Policy</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="#">Accessibility</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-span-2 md:col-span-4 lg:col-span-1">
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Join Our Newsletter</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Get the best deals and fresh updates delivered to your inbox.</p>
+                            <form class="flex">
+                                <input class="form-input w-full rounded-r-none rounded-l-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary/50 text-sm" placeholder="Enter your email" type="email"/>
+                                <button class="bg-primary text-slate-900 font-bold px-4 rounded-r-lg hover:bg-opacity-90 transition-colors text-sm" type="submit">Subscribe</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+                        <p>© 2024 Grocery Go. All Rights Reserved.</p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        // Initialize EmailJS (Replace with your public key in config.js or here)
+        // emailjs.init("YOUR_PUBLIC_KEY");
+
+        // Mobile Menu Functionality
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const mobileAuthBtn = document.getElementById('mobileAuthBtn');
+
+        function openMenu() {
+            mobileMenu.classList.add('open');
+            menuOverlay.classList.add('active');
+            menuBtn.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMenu() {
+            mobileMenu.classList.remove('open');
+            menuOverlay.classList.remove('active');
+            menuBtn.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if(menuBtn) menuBtn.addEventListener('click', openMenu);
+        if(closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
+        if(menuOverlay) menuOverlay.addEventListener('click', closeMenu);
+        
+        if(mobileAuthBtn) {
+            mobileAuthBtn.addEventListener('click', () => {
+                closeMenu();
+                window.location.href = 'authpages.html';
+            });
+        }
+
+        // Contact Form Submission (Mock)
+        const contactForm = document.getElementById('contactForm');
+        if(contactForm) {
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show success state
+                const btn = this.querySelector('button[type="submit"]');
+                const originalText = btn.innerText;
+                
+                btn.innerText = 'Sent Successfully!';
+                btn.classList.add('bg-green-600', 'text-white');
+                btn.disabled = true;
+                
+                setTimeout(() => {
+                    this.reset();
+                    btn.innerText = originalText;
+                    btn.classList.remove('bg-green-600', 'text-white');
+                    btn.disabled = false;
+                    alert('Thanks for contacting us! We will get back to you shortly.');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
+

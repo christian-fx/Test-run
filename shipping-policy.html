@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Shipping Policy - Grocery Go</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="config.js"></script>
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
+        .mobile-menu.open { transform: translateX(0); }
+        .menu-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
+        .menu-overlay.active { opacity: 1; visibility: visible; }
+        .hamburger.active .hamburger-line:nth-child(1) { transform: rotate(45deg) translate(6px, 6px); }
+        .hamburger.active .hamburger-line:nth-child(2) { opacity: 0; }
+        .hamburger.active .hamburger-line:nth-child(3) { transform: rotate(-45deg) translate(6px, -6px); }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: { "primary": "#13ec13", "background-light": "#f6f8f6", "background-dark": "#102210" },
+                    fontFamily: { "display": ["Plus Jakarta Sans", "sans-serif"] },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+        
+        <!-- Mobile Menu Overlay -->
+        <div class="menu-overlay fixed inset-0 bg-black/50 z-40" id="menuOverlay"></div>
+        <!-- Mobile Menu -->
+        <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-slate-900 shadow-xl z-50 p-6" id="mobileMenu">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-bold">Menu</h2>
+                <button class="hamburger active" id="closeMenuBtn">
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="product.html">Shop</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="cart.html">Cart</a>
+            </nav>
+        </div>
+
+        <div class="layout-container flex h-full grow flex-col">
+            <!-- Header -->
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-3 sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+                <div class="flex items-center gap-8">
+                    <button class="lg:hidden hamburger flex flex-col" id="menuBtn">
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                    </button>
+                    <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50">
+                        <h2 class="text-xl font-bold tracking-tight cursor-pointer" onclick="window.location.href='index.html'">Grocery Go</h2>
+                    </div>
+                    <nav class="hidden lg:flex items-center gap-9">
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="index.html">Home</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="product.html">Shop</a>
+                        <a class="text-sm font-bold text-primary transition-colors" href="cart.html">Cart</a>
+                    </nav>
+                </div>
+
+            </header>
+
+            <main class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-12">
+                <div class="layout-content-container flex flex-col w-full max-w-4xl flex-1">
+                    <!-- Heading -->
+                    <div class="flex flex-col gap-3 mb-10">
+                        <h1 class="text-slate-900 dark:text-white text-4xl sm:text-5xl font-black leading-tight tracking-tight">Shipping Policy</h1>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm">Last Updated: October 26, 2023</p>
+                    </div>
+
+                    <!-- Highlights Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3">
+                            <span class="material-symbols-outlined text-primary text-3xl">local_shipping</span>
+                            <h3 class="font-bold text-slate-900 dark:text-white">Fast Delivery</h3>
+                            <p class="text-sm text-slate-500">Same-day and scheduled options.</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3">
+                            <span class="material-symbols-outlined text-primary text-3xl">sell</span>
+                            <h3 class="font-bold text-slate-900 dark:text-white">Free Shipping</h3>
+                            <p class="text-sm text-slate-500">On all orders over $50.</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3">
+                            <span class="material-symbols-outlined text-primary text-3xl">pin_drop</span>
+                            <h3 class="font-bold text-slate-900 dark:text-white">Live Tracking</h3>
+                            <p class="text-sm text-slate-500">Track status in real-time.</p>
+                        </div>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="space-y-6">
+                        <!-- Methods Table -->
+                        <details class="group bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 open:ring-2 open:ring-primary/20 transition-all" open>
+                            <summary class="flex cursor-pointer items-center justify-between text-lg font-bold text-slate-900 dark:text-white list-none">
+                                Shipping Methods & Costs
+                                <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                            </summary>
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 dark:border-slate-700">
+                                            <th class="p-3 font-semibold text-slate-800 dark:text-slate-200">Method</th>
+                                            <th class="p-3 font-semibold text-slate-800 dark:text-slate-200">Cost</th>
+                                            <th class="p-3 font-semibold text-slate-800 dark:text-slate-200">Estimate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-slate-600 dark:text-slate-400">
+                                        <tr class="border-b border-slate-200 dark:border-slate-700">
+                                            <td class="p-3">Standard</td>
+                                            <td class="p-3">$5.99 (Free > $50)</td>
+                                            <td class="p-3">2-3 business days</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-200 dark:border-slate-700">
+                                            <td class="p-3">Same-Day</td>
+                                            <td class="p-3">$9.99</td>
+                                            <td class="p-3">Within 4 hours</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3">Scheduled</td>
+                                            <td class="p-3">$7.99</td>
+                                            <td class="p-3">2-hour window</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+
+                        <!-- Tracking -->
+                        <details class="group bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6">
+                            <summary class="flex cursor-pointer items-center justify-between text-lg font-bold text-slate-900 dark:text-white list-none">
+                                Order Tracking
+                                <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                            </summary>
+                            <p class="mt-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                Once shipped, you'll receive a confirmation email with a tracking link. You can also find tracking info in your 'My Orders' section.
+                            </p>
+                        </details>
+
+                        <!-- Restrictions -->
+                        <details class="group bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6">
+                            <summary class="flex cursor-pointer items-center justify-between text-lg font-bold text-slate-900 dark:text-white list-none">
+                                Shipping Restrictions
+                                <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                            </summary>
+                            <p class="mt-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                                We currently deliver to select zip codes. Enter your zip code at checkout to confirm. Alcohol deliveries require an adult signature.
+                            </p>
+                        </details>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="bg-slate-100 dark:bg-slate-900/50 mt-12 border-t border-slate-200 dark:border-slate-800">
+                <div class="max-w-7xl mx-auto px-4 py-8 text-center text-sm text-slate-500">
+                    <p>© 2024 Grocery Go. All rights reserved.</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+    <script>
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+        function toggleMenu(show) {
+            if(show) { mobileMenu.classList.add('open'); menuOverlay.classList.add('active'); document.body.style.overflow='hidden'; }
+            else { mobileMenu.classList.remove('open'); menuOverlay.classList.remove('active'); document.body.style.overflow=''; }
+        }
+        if(menuBtn) menuBtn.addEventListener('click', ()=>toggleMenu(true));
+        if(closeMenuBtn) closeMenuBtn.addEventListener('click', ()=>toggleMenu(false));
+        if(menuOverlay) menuOverlay.addEventListener('click', ()=>toggleMenu(false));
+    </script>
+</body>
+</html>
+

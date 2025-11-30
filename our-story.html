@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Our Story - Grocery Go</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
+        .mobile-menu.open { transform: translateX(0); }
+        .menu-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
+        .menu-overlay.active { opacity: 1; visibility: visible; }
+        .hamburger-line { transition: all 0.3s ease-in-out; }
+        .hamburger.active .hamburger-line:nth-child(1) { transform: rotate(45deg) translate(6px, 6px); }
+        .hamburger.active .hamburger-line:nth-child(2) { opacity: 0; }
+        .hamburger.active .hamburger-line:nth-child(3) { transform: rotate(-45deg) translate(6px, -6px); }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+        
+        <div class="menu-overlay fixed inset-0 bg-black/50 z-40" id="menuOverlay"></div>
+        <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-slate-900 shadow-xl z-50 p-6" id="mobileMenu">
+             <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-bold">Menu</h2>
+                <button class="hamburger active" id="closeMenuBtn">
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="index.html">Home</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="product.html">Shop</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="about.html">About Us</a>
+               
+            </nav>
+        </div>
+
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-3 sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+                 <div class="flex items-center gap-8">
+                    <button class="lg:hidden hamburger flex flex-col" id="menuBtn">
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                    </button>
+                    <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 cursor-pointer" onclick="window.location.href='index.html'">
+                        <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                    </div>
+                    <nav class="hidden lg:flex items-center gap-9">
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="index.html">Home</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="product.html">Shop</a>
+                        <a class="text-sm font-medium text-primary transition-colors" href="about.html">About</a>
+                    </nav>
+            </header>
+
+            <main class="flex-1">
+                 <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 pt-10">
+                    <div class="max-w-4xl mx-auto text-center mb-16">
+                        <h1 class="text-4xl sm:text-5xl font-black leading-tight text-slate-900 dark:text-slate-50 mb-4">Our Story</h1>
+                        <p class="text-lg text-slate-600 dark:text-slate-400">Discover our journey from a small neighborhood market to the beloved community hub we are today.</p>
+                    </div>
+
+                    <div class="max-w-3xl mx-auto relative pb-20">
+                        <!-- Vertical Line -->
+                        <div class="absolute left-[19px] top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800"></div>
+
+                        <!-- Timeline Items -->
+                        <div class="relative flex gap-8 mb-16 group">
+                            <div class="flex-none z-10">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-background-dark flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
+                                    <span class="material-symbols-outlined text-xl text-primary group-hover:text-slate-900">storefront</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 pt-1">
+                                <div class="flex items-baseline justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Founded by the Smith Family</h3>
+                                    <span class="text-primary font-bold">1985</span>
+                                </div>
+                                <p class="text-slate-600 dark:text-slate-400">Our humble beginnings as a small fruit stand with a big dream in downtown. We started with just two crates of apples and a desire to serve.</p>
+                            </div>
+                        </div>
+
+                        <div class="relative flex gap-8 mb-16 group">
+                            <div class="flex-none z-10">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-background-dark flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
+                                    <span class="material-symbols-outlined text-xl text-primary group-hover:text-slate-900">grass</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 pt-1">
+                                <div class="flex items-baseline justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">The Organic Revolution</h3>
+                                    <span class="text-primary font-bold">2005</span>
+                                </div>
+                                <p class="text-slate-600 dark:text-slate-400">We listened to our community and introduced a dedicated organic produce section, partnering with over 20 local farms.</p>
+                            </div>
+                        </div>
+
+                        <div class="relative flex gap-8 mb-16 group">
+                            <div class="flex-none z-10">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-background-dark flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
+                                    <span class="material-symbols-outlined text-xl text-primary group-hover:text-slate-900">local_shipping</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 pt-1">
+                                <div class="flex items-baseline justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Grocery Go Online</h3>
+                                    <span class="text-primary font-bold">2020</span>
+                                </div>
+                                <p class="text-slate-600 dark:text-slate-400">Adapting to the times, we launched our digital storefront, bringing fresh groceries directly to doorsteps for ultimate convenience.</p>
+                            </div>
+                        </div>
+                         <div class="relative flex gap-8 group">
+                            <div class="flex-none z-10">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-background-dark flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
+                                    <span class="material-symbols-outlined text-xl text-primary group-hover:text-slate-900">rocket_launch</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 pt-1">
+                                <div class="flex items-baseline justify-between mb-2">
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">The Future</h3>
+                                    <span class="text-primary font-bold">Today</span>
+                                </div>
+                                <p class="text-slate-600 dark:text-slate-400">We continue to innovate with sustainable packaging and zero-emission delivery fleets.</p>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+            </main>
+
+            <footer class="bg-slate-100 dark:bg-slate-900/50 mt-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-12">
+                    <p class="text-center text-sm text-slate-600 dark:text-slate-400">© 2024 Grocery Go. All Rights Reserved.</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+    <script>
+        // Menu script (same as others)
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+        function openMenu() { mobileMenu.classList.add('open'); menuOverlay.classList.add('active'); menuBtn.classList.add('active'); document.body.style.overflow = 'hidden'; }
+        function closeMenu() { mobileMenu.classList.remove('open'); menuOverlay.classList.remove('active'); menuBtn.classList.remove('active'); document.body.style.overflow = ''; }
+        menuBtn.addEventListener('click', openMenu); closeMenuBtn.addEventListener('click', closeMenu); menuOverlay.addEventListener('click', closeMenu);
+    </script>
+</body>
+</html>
+
