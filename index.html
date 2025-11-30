@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FreshCart - Grocery Store Landing Page</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    
+    <!-- Firebase & EmailJS -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Mobile Menu Styles */
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        
+        .menu-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Hamburger Animation */
+        .hamburger-line {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .hamburger.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .hamburger.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+        
+        /* Toast Notification Styles */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+        }
+        
+        .toast-message {
+            font-weight: 500;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+    <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+        <!-- Toast Notification -->
+        <div class="toast" id="toastNotification">
+            <span class="toast-icon material-symbols-outlined">check_circle</span>
+            <span class="toast-message">Item added to cart!</span>
+        </div>
+        
+        <!-- Mobile Menu Overlay -->
+        <div class="menu-overlay fixed inset-0 bg-black/50 z-40" id="menuOverlay"></div>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-menu fixed left-0 top-0 h-full w-80 bg-white dark:bg-slate-900 shadow-xl z-50 p-6" id="mobileMenu">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-bold">Menu</h2>
+                <button class="hamburger active" id="closeMenuBtn">
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                    <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#">Home</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#">Shop</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#deals">Deals</a>
+                <a class="block text-lg font-medium hover:text-primary transition-colors py-2" href="#" id="mobileAuthBtn">Login/Signup</a>
+            </nav>
+        </div>
+
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-3 sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+                <div class="flex items-center gap-8">
+                    <!-- Mobile Menu Button -->
+                    <button class="lg:hidden hamburger flex flex-col" id="menuBtn">
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200 mb-1.5"></div>
+                        <div class="hamburger-line w-6 h-0.5 bg-slate-800 dark:bg-slate-200"></div>
+                    </button>
+                    
+                    <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50">
+                        <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                    </div>
+                    <nav class="hidden lg:flex items-center gap-9">
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Home</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#">Shop</a>
+                        <a class="text-sm font-medium hover:text-primary transition-colors" href="#deals">Deals</a>
+                    </nav>
+                </div>
+                <div class="flex flex-1 justify-end items-center gap-2 sm:gap-4">
+                    <div class="flex gap-2">
+                        <!-- Auth Button -->
+                        <button id="authBtn" class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-2 text-sm font-bold min-w-0 transition-colors" onclick="window.location.href='authpages.html'">
+                            <span class="material-symbols-outlined">login</span>
+                        </button>
+                        
+                        <!-- Profile Button -->
+                        <button id="profileBtn" style="display: none;" class="flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-2 text-sm font-bold min-w-0 transition-colors" onclick="window.location.href='profile.html'">
+                            <span class="material-symbols-outlined">person</span>
+                        </button>
+                        
+                        <!-- Cart Button -->
+                        <button class="relative flex items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-slate-200/60 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-2 text-sm font-bold min-w-0 transition-colors" onclick="window.location.href='cart.html'">
+                            <span class="material-symbols-outlined">shopping_cart</span>
+                            <span class="cart-count absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-slate-900 text-xs font-bold">0</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1">
+                <div class="flex flex-col gap-12">
+                    <!-- Hero Section -->
+                    <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 pt-5">
+                        <div class="relative min-h-[480px] rounded-xl overflow-hidden">
+                            <img alt="A vibrant overhead shot of fresh vegetables and fruits spread across a wooden table." class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmzWsj-UG5pfw3JzKBUHCOwgsQeQwVoj_Xu5yQ_1tlxqFCuZ3nUOLnM1IjnjYLd8k8Le0bgc4gZri1mC0Tr3fcB36UlglC19tjLSsvE7jK5-yl6LPugTTGPa__x1miZXN3Qx7o7dd2flE6cpflKJJbQwX7s1BNfj3YXq55cmmKFMkj9L1bjkKg_q8sD4W50fZMzUmbW-B0QlIq2DZEK_IXdiK8C2CebsQqPKIvsAtON0t7bEOAb5OCgB-8SxuSZsFdPE0aqMtQB9t9"/>
+                            <div class="absolute inset-0 bg-black/40"></div>
+                            <div class="relative h-full min-h-[480px] flex flex-col items-center justify-center text-center p-4">
+                                <div class="flex flex-col gap-4 max-w-2xl mx-auto">
+                                    <h1 class="text-white text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tighter">Fresh Groceries, Delivered Fast</h1>
+                                    <h2 class="text-white/90 text-base sm:text-lg font-normal leading-normal max-w-xl mx-auto">Quality ingredients and everyday essentials delivered right to your door in minutes.</h2>
+                                </div>
+                 <a href="product.html">               <button class="mt-8 flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-slate-900 text-base font-bold leading-normal tracking-wide hover:bg-opacity-90 transition-all shadow-lg shadow-primary/20" onclick="scrollToCategories()">
+                                    <span class="truncate">Start Shopping</span>
+                                </button></a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories & Search Section -->
+                    <div class="px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40" id="categoriesSection">
+                        <div class="max-w-7xl mx-auto flex flex-col gap-12">
+                            <section class="flex flex-col gap-8">
+                                <div class="relative w-full max-w-3xl mx-auto">
+                                    <input class="w-full h-14 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-14 pr-4 text-lg placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Search for products..." id="searchInput"/>
+                                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 !text-2xl">search</span>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="categoriesGrid">
+                                    <!-- Categories will be populated by JavaScript -->
+                                </div>
+                            </section>
+
+                            <!-- Featured Products -->
+                            <section>
+                                <h2 class="text-slate-900 dark:text-slate-50 text-2xl font-bold leading-tight tracking-tight pb-4">Featured Products</h2>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="featuredProducts">
+                                    <!-- Products will be populated by JavaScript -->
+                                </div>
+                            </section>
+
+                            <!-- Special Deals -->
+                            <section id="deals">
+                                <h2 class="text-slate-900 dark:text-slate-50 text-2xl font-bold leading-tight tracking-tight pb-4">Special Deals</h2>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="relative bg-rose-100 dark:bg-rose-900/30 rounded-xl p-8 flex flex-col md:flex-row items-center gap-8 overflow-hidden">
+                                        <div class="relative z-10 text-center md:text-left">
+                                            <h3 class="text-3xl font-bold text-rose-900 dark:text-rose-100">BOGO Free</h3>
+                                            <p class="text-lg text-rose-800 dark:text-rose-200 mt-2 mb-4">on all sparkling water.</p>
+                                            <button class="bg-rose-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-rose-600 transition-colors">Shop Now</button>
+                                        </div>
+                                        <img alt="Bottles of sparkling water" class="w-48 h-48 object-contain transform md:rotate-12 md:scale-125 md:absolute md:-right-8 md:bottom-0 transition-transform hover:scale-110 md:hover:scale-150 duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPfWB5Fwd2bTezUIVL5cepqtiV5gEnG1rVR9qOus01UK6s9ADWDyGsKBNyum-D6Aac5FcWG153UdCd9pX-apwxlbTzX842bv3t240HiT4OAESP1TeQNbHTYKL4FzdbWWPz_f2UFwhX4nAvDtvE0D8z8LryqobKm3aDqIPYFA3XR97SG2Xs_f_iDuSm9sitTGxEgJVqjm5Qu9OQlNDYPurRu6DvHsD_BSPszvWXCGzXHP1F3mwvfkYrDQ_vYt4zAKwJJFW6eKby8dH4"/>
+                                    </div>
+                                    <div class="relative bg-blue-100 dark:bg-blue-900/30 rounded-xl p-8 flex flex-col md:flex-row items-center gap-8 overflow-hidden">
+                                        <div class="relative z-10 text-center md:text-left">
+                                            <h3 class="text-3xl font-bold text-blue-900 dark:text-blue-100">20% Off</h3>
+                                            <p class="text-lg text-blue-800 dark:text-blue-200 mt-2 mb-4">on your favorite snacks.</p>
+                                            <button class="bg-blue-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-600 transition-colors">Claim Offer</button>
+                                        </div>
+                                        <img alt="A bag of potato chips" class="w-48 h-48 object-contain transform md:rotate-12 md:scale-125 md:absolute md:-right-8 md:bottom-0 transition-transform hover:scale-110 md:hover:scale-150 duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLjQZJgdbUcNcnbUHOZBUE0lmQxxLDF64meLZqFClvB1GtjYsvFOuZJRJ6j4J7rFzqOyHIhACNLFoPpwS7nrsJvgAlW87KPnp5sJxGP3v4JPBvk_qJnaZ6U96QwphwblPA0y3DageX4Qfy3VVyNstStFDCCShd-88WU133FAeW_EsjUB2wp9ibwd0gXYm5ina2Jxrb6AwyIbi_TUJ3vTlt2BYeUS-xwmaGEOWFBx0VT_NmBrvJjCeFPoXStXMkrgvE3hR5BSVJdJJ3"/>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="bg-slate-100 dark:bg-slate-900/50 mt-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 xl:px-40 py-12">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                        <div class="col-span-2 lg:col-span-1">
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-50 mb-4">
+                                <h2 class="text-xl font-bold tracking-tight">Grocery Go</h2>
+                            </div>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">Your one-stop shop for the freshest groceries, delivered with care.</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Customer Service</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="help.html">Help Center</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="contact.html">Contact Us</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="returns-refund.html">Returns &amp; Refunds</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">About Us</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="our-story.html">Our Story</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="career.html">Careers</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="press.html">Press</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Legal</h3>
+                            <ul class="space-y-2">
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="t&c.html">Terms of Service</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="PP.html">Privacy Policy</a></li>
+                                <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="shipping-policy.html">Shipping Policy</li>
+               <li><a class="text-sm text-slate-600 dark:text-slate-400 hover:text-primary transition-colors" href="delivery-policy.html">Delivery Policy</a></li>                 
+                               
+                            </ul>
+                        </div>
+                        <div class="col-span-2 md:col-span-4 lg:col-span-1">
+                            <h3 class="font-bold text-slate-900 dark:text-slate-100 mb-4">Join Our Newsletter</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Get the best deals and fresh updates delivered to your inbox.</p>
+                            <form class="flex">
+                                <input class="form-input w-full rounded-r-none rounded-l-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-primary/50 text-sm" placeholder="Enter your email" type="email"/>
+                                <button class="bg-primary text-slate-900 font-bold px-4 rounded-r-lg hover:bg-opacity-90 transition-colors text-sm" type="submit">Subscribe</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+                        <p>© 2024 FreshCart. All Rights Reserved.</p>
+                        <div class="flex space-x-4 mt-4 md:mt-0">
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" fill-rule="evenodd"></path></svg>
+                            </a>
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.71v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"></path></svg>
+                            </a>
+                            <a class="hover:text-primary transition-colors" href="#">
+                                <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.11 11.16c-1.33.64-2.68.96-4.06.96-1.42 0-2.8-.34-4.12-.99A.5.5 0 016.5 12.5v-1a.5.5 0 01.44-.5c1.32.65 2.7.98 4.1.98s2.78-.33 4.1-.98a.5.5 0 01.44.5v1a.5.5 0 01-.47.66zm-7.7-4.42a.5.5 0 01.4-.2h.02a.5.5 0 01.4.2l.3.52a.5.5 0 01-.4.8h-.02a.5.5 0 01-.4-.8l.3-.52zm6.8 0a.5.5 0 01.4-.2h.02a.5.5 0 01.4.2l.3.52a.5.5 0 01-.4.8h-.02a.5.5 0 01-.4-.8l.3-.52z" fill-rule="evenodd"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // Sample data for categories and products
+        const categories = [
+            { id: 1, name: "Fresh Produce", image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=400&fit=crop" },
+            { id: 2, name: "Dairy & Eggs", image: "https://images.unsplash.com/photo-1550583727-5b7f66b17d32?w=400&h=400&fit=crop" },
+            { id: 3, name: "Meat & Seafood", image: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400&h=400&fit=crop" },
+            { id: 4, name: "Bakery & Breads", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop" },
+            { id: 5, name: "Pantry Staples", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop" },
+            { id: 6, name: "Beverages", image: "https://images.unsplash.com/photo-1544145945-f90425340c5e?w=400&h=400&fit=crop" }
+        ];
+
+        const products = [
+            { id: 1, name: "Organic Bananas", price: 1.99, description: "Fresh, sweet, and packed with potassium.", image: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&h=300&fit=crop", category: "Fresh Produce" },
+            { id: 2, name: "Cage-Free Brown Eggs", price: 3.49, description: "One dozen large, grade A eggs.", image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400&h=300&fit=crop", category: "Dairy & Eggs", onSale: true },
+            { id: 3, name: "Avocado Toast Kit", price: 8.99, description: "Sourdough, avocados, and everything bagel seasoning.", image: "https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400&h=300&fit=crop", category: "Bakery & Breads" },
+            { id: 4, name: "Artisanal Cold Brew", price: 5.49, description: "Smooth and rich, ready to drink. 32 fl oz.", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=300&fit=crop", category: "Beverages", isNew: true }
+        ];
+
+        // Toast Notification Functionality
+        function showToast() {
+            const toast = document.getElementById('toastNotification');
+            toast.classList.add('show');
+            
+            // Hide the toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Add to Cart Functionality
+        function addToCart(product) {
+            // Get existing cart from localStorage or initialize empty array
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            
+            // Check if product already exists in cart
+            const existingProductIndex = cart.findIndex(item => item.id === product.id);
+            
+            if (existingProductIndex !== -1) {
+                // If product exists, increase quantity
+                cart[existingProductIndex].quantity += 1;
+            } else {
+                // If product doesn't exist, add it with quantity 1
+                product.quantity = 1;
+                cart.push(product);
+            }
+            
+            // Save updated cart to localStorage
+            localStorage.setItem('cart', JSON.stringify(cart));
+            
+            // Update cart UI
+            updateCartUI();
+            
+            // Show toast notification
+            showToast();
+        }
+
+        // Update Cart UI
+        function updateCartUI() {
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const cartCount = document.querySelector('.cart-count');
+            
+            // Calculate total items in cart
+            const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+            
+            // Update cart count
+            if (cartCount) {
+                cartCount.textContent = totalItems;
+            }
+        }
+
+        // Mobile Menu Functionality
+        const menuBtn = document.getElementById('menuBtn');
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const mobileAuthBtn = document.getElementById('mobileAuthBtn');
+
+        function openMenu() {
+            mobileMenu.classList.add('open');
+            menuOverlay.classList.add('active');
+            menuBtn.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMenu() {
+            mobileMenu.classList.remove('open');
+            menuOverlay.classList.remove('active');
+            menuBtn.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        menuBtn.addEventListener('click', openMenu);
+        closeMenuBtn.addEventListener('click', closeMenu);
+        menuOverlay.addEventListener('click', closeMenu);
+        mobileAuthBtn.addEventListener('click', () => {
+            closeMenu();
+            window.location.href = 'authpages.html';
+        });
+
+        // Populate Categories
+        function populateCategories() {
+            const categoriesGrid = document.getElementById('categoriesGrid');
+            categoriesGrid.innerHTML = categories.map(category => `
+                <div class="relative group cursor-pointer overflow-hidden rounded-xl aspect-square" onclick="filterByCategory('${category.name}')">
+                    <img alt="${category.name}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" src="${category.image}"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <p class="absolute bottom-4 left-4 text-white text-base font-bold leading-tight">${category.name}</p>
+                </div>
+            `).join('');
+        }
+
+        // Populate Featured Products
+        function populateProducts() {
+            const featuredProducts = document.getElementById('featuredProducts');
+            featuredProducts.innerHTML = products.map(product => `
+                <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col group">
+                    <div class="relative overflow-hidden">
+                        <img class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" alt="${product.name}" src="${product.image}"/>
+                        ${product.onSale ? '<span class="absolute top-3 left-3 bg-orange-400 text-white text-xs font-bold px-2 py-1 rounded-full">On Sale</span>' : ''}
+                        ${product.isNew ? '<span class="absolute top-3 left-3 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">New</span>' : ''}
+                        <button class="absolute top-3 right-3 bg-white/80 dark:bg-slate-800/80 rounded-full h-8 w-8 flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                            <span class="material-symbols-outlined !text-xl text-slate-600 dark:text-slate-300">favorite_border</span>
+                        </button>
+                    </div>
+                    <div class="p-4 flex flex-col flex-1">
+                        <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1">${product.name}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 flex-1">${product.description}</p>
+                        <div class="flex justify-between items-center">
+                            <p class="text-xl font-extrabold text-slate-900 dark:text-slate-50">$${product.price}</p>
+                            <button class="bg-primary/20 text-slate-900 dark:text-primary font-bold rounded-lg h-10 px-4 text-sm hover:bg-primary/30 transition-colors flex items-center gap-2" onclick="addToCart(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                                <span class="material-symbols-outlined !text-lg">add_shopping_cart</span>
+                                <span>Add</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search Functionality
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredProducts = products.filter(product => 
+                product.name.toLowerCase().includes(searchTerm) || 
+                product.category.toLowerCase().includes(searchTerm)
+            );
+            
+            const featuredProducts = document.getElementById('featuredProducts');
+            featuredProducts.innerHTML = filteredProducts.map(product => `
+                <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col group">
+                    <div class="relative overflow-hidden">
+                        <img class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" alt="${product.name}" src="${product.image}"/>
+                        ${product.onSale ? '<span class="absolute top-3 left-3 bg-orange-400 text-white text-xs font-bold px-2 py-1 rounded-full">On Sale</span>' : ''}
+                        ${product.isNew ? '<span class="absolute top-3 left-3 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">New</span>' : ''}
+                        <button class="absolute top-3 right-3 bg-white/80 dark:bg-slate-800/80 rounded-full h-8 w-8 flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                            <span class="material-symbols-outlined !text-xl text-slate-600 dark:text-slate-300">favorite_border</span>
+                        </button>
+                    </div>
+                    <div class="p-4 flex flex-col flex-1">
+                        <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1">${product.name}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 flex-1">${product.description}</p>
+                        <div class="flex justify-between items-center">
+                            <p class="text-xl font-extrabold text-slate-900 dark:text-slate-50">$${product.price}</p>
+                            <button class="bg-primary/20 text-slate-900 dark:text-primary font-bold rounded-lg h-10 px-4 text-sm hover:bg-primary/30 transition-colors flex items-center gap-2" onclick="addToCart(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                                <span class="material-symbols-outlined !text-lg">add_shopping_cart</span>
+                                <span>Add</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        });
+
+        // Category Filter
+        function filterByCategory(categoryName) {
+            const filteredProducts = products.filter(product => product.category === categoryName);
+            const featuredProducts = document.getElementById('featuredProducts');
+            
+            featuredProducts.innerHTML = filteredProducts.map(product => `
+                <div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col group">
+                    <div class="relative overflow-hidden">
+                        <img class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" alt="${product.name}" src="${product.image}"/>
+                        ${product.onSale ? '<span class="absolute top-3 left-3 bg-orange-400 text-white text-xs font-bold px-2 py-1 rounded-full">On Sale</span>' : ''}
+                        ${product.isNew ? '<span class="absolute top-3 left-3 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">New</span>' : ''}
+                        <button class="absolute top-3 right-3 bg-white/80 dark:bg-slate-800/80 rounded-full h-8 w-8 flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                            <span class="material-symbols-outlined !text-xl text-slate-600 dark:text-slate-300">favorite_border</span>
+                        </button>
+                    </div>
+                    <div class="p-4 flex flex-col flex-1">
+                        <h3 class="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1">${product.name}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 flex-1">${product.description}</p>
+                        <div class="flex justify-between items-center">
+                            <p class="text-xl font-extrabold text-slate-900 dark:text-slate-50">$${product.price}</p>
+                            <button class="bg-primary/20 text-slate-900 dark:text-primary font-bold rounded-lg h-10 px-4 text-sm hover:bg-primary/30 transition-colors flex items-center gap-2" onclick="addToCart(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                                <span class="material-symbols-outlined !text-lg">add_shopping_cart</span>
+                                <span>Add</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Scroll to categories
+        function scrollToCategories() {
+            document.getElementById('categoriesSection').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            populateCategories();
+            populateProducts();
+            updateCartUI();
+        });
+    </script>
+</body>
+</html>

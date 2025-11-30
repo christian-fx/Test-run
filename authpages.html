@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Login/Signup Page</title>
+    
+    <!-- Load Firebase FIRST -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Then load your config -->
+    <script src="config.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4CAF50",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .password-strength-bar {
+            height: 4px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .strength-weak { background-color: #ef4444; width: 25%; }
+        .strength-fair { background-color: #f59e0b; width: 50%; }
+        .strength-good { background-color: #3b82f6; width: 75%; }
+        .strength-strong { background-color: #10b981; width: 100%; }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .alert-success {
+            background-color: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
+        }
+        
+        .alert-error {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body class="font-display">
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+        <!-- Alert Container -->
+        <div id="alertContainer" class="fixed top-4 right-4 z-50 max-w-sm w-full"></div>
+        
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="flex flex-1 justify-center items-center">
+                <div class="layout-content-container flex flex-col w-full max-w-6xl flex-1 md:my-10">
+                    <!-- Main Auth Page -->
+                    <main id="authPage" class="grid grid-cols-1 md:grid-cols-2 bg-white dark:bg-[#183118] md:shadow-2xl md:shadow-slate-300/10 dark:md:shadow-black/20 md:rounded-xl overflow-hidden min-h-[80vh]">
+                        <!-- Left Column: Image -->
+                        <div class="hidden md:flex flex-col">
+                            <div class="w-full h-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden" data-alt="A vibrant arrangement of fresh fruits and vegetables, including oranges, tomatoes, and leafy greens." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAVSZyeV-NpjjUs9glm_VQlKEKdcgMSOAWZhZJSYVVGmDN3kMzdtPR-qSB8GpFmo5CWLs9DgV3Trb6EcQjT1ftHINRWLhaNIIYwG1d5X5Rr08qc0_UOUMHdGPt4DU7aMwx9cSo8WSTPjh34rgK3ef1RZVBhaGHHxVKz3zD-os8y4k31iFTBMTeSt2A9wE0IrtT1jcPnI0ZFPmb25mESPMu70A4vTZZ6dHAL6-t1N-gJqmpP63pW353njN6-P4bvgGdjBWuraoMFhT8P");'></div>
+                        </div>
+                        
+                        <!-- Right Column: Form -->
+                        <div class="flex flex-col justify-center px-6 sm:px-10 md:px-12 py-10">
+                            <!-- Header -->
+                            <div class="flex items-center gap-3 mb-4">
+                                <h1 class="text-2xl font-bold text-[#111811] dark:text-white">Grocery Go</h1>
+                            </div>
+                            
+                            <!-- Page Heading -->
+                            <div class="flex min-w-72 flex-col gap-1 mb-6">
+                                <p id="authTitle" class="text-[#111811] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Welcome Back!</p>
+                                <p id="authSubtitle" class="text-[#618961] dark:text-green-200 text-base font-normal leading-normal">Log in to start your shopping</p>
+                            </div>
+                            
+                            <!-- Segmented Buttons -->
+                            <div class="flex mb-6">
+                                <div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-background-light dark:bg-background-dark p-1">
+                                    <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-primary has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#111811] dark:has-[:checked]:text-white text-[#618961] dark:text-green-200 text-sm font-medium leading-normal transition-colors">
+                                        <span class="truncate">Login</span>
+                                        <input checked class="invisible w-0" name="auth-toggle" type="radio" value="login"/>
+                                    </label>
+                                    <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-primary has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#111811] dark:has-[:checked]:text-white text-[#618961] dark:text-green-200 text-sm font-medium leading-normal transition-colors">
+                                        <span class="truncate">Sign Up</span>
+                                        <input class="invisible w-0" name="auth-toggle" type="radio" value="signup"/>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Login Form -->
+                            <form id="loginForm" class="flex flex-col gap-5">
+                                <!-- Email Field -->
+                                <label class="flex flex-col w-full">
+                                    <p class="text-[#111811] dark:text-white text-base font-medium leading-normal pb-2">Email Address</p>
+                                    <input id="loginEmail" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 focus:border-primary dark:focus:border-primary h-14 placeholder:text-[#618961] dark:placeholder:text-green-300/50 p-[15px] text-base font-normal leading-normal" placeholder="Enter your email" type="email" required/>
+                                </label>
+                                
+                                <!-- Password Field -->
+                                <label class="flex flex-col w-full">
+                                    <div class="flex justify-between items-baseline pb-2">
+                                        <p class="text-[#111811] dark:text-white text-base font-medium leading-normal">Password</p>
+                                        <a class="text-sm font-medium text-primary hover:underline cursor-pointer" id="forgotPasswordLink">Forgot Password?</a>
+                                    </div>
+                                    <div class="flex w-full flex-1 items-stretch">
+                                        <input id="loginPassword" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 focus:border-primary dark:focus:border-primary h-14 placeholder:text-[#618961] dark:placeholder:text-green-300/50 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" placeholder="Enter your password" type="password" required/>
+                                        <button type="button" class="password-toggle text-[#618961] dark:text-green-200 flex border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 items-center justify-center px-4 rounded-r-lg border-l-0 hover:bg-slate-50 dark:hover:bg-green-900/40">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </button>
+                                    </div>
+                                </label>
+                                
+                                <!-- CTA Button -->
+                                <button type="submit" class="flex items-center justify-center whitespace-nowrap h-14 px-4 rounded-lg w-full bg-primary text-white text-base font-bold leading-normal tracking-wide shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors">
+                                    <span id="loginButtonText">Log In</span>
+                                    <span id="loginSpinner" class="hidden ml-2">
+                                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </form>
+                            
+                            <!-- Signup Form -->
+                            <form id="signupForm" class="flex flex-col gap-5 hidden">
+                                <!-- Email Field -->
+                                <label class="flex flex-col w-full">
+                                    <p class="text-[#111811] dark:text-white text-base font-medium leading-normal pb-2">Email Address</p>
+                                    <input id="signupEmail" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 focus:border-primary dark:focus:border-primary h-14 placeholder:text-[#618961] dark:placeholder:text-green-300/50 p-[15px] text-base font-normal leading-normal" placeholder="Enter your email" type="email" required/>
+                                </label>
+                                
+                                <!-- Password Field -->
+                                <label class="flex flex-col w-full">
+                                    <p class="text-[#111811] dark:text-white text-base font-medium leading-normal pb-2">Password</p>
+                                    <div class="flex w-full flex-1 items-stretch">
+                                        <input id="signupPassword" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 focus:border-primary dark:focus:border-primary h-14 placeholder:text-[#618961] dark:placeholder:text-green-300/50 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" placeholder="Create a password" type="password" required/>
+                                        <button type="button" class="password-toggle text-[#618961] dark:text-green-200 flex border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 items-center justify-center px-4 rounded-r-lg border-l-0 hover:bg-slate-50 dark:hover:bg-green-900/40">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </button>
+                                    </div>
+                                    <!-- Password Strength Meter -->
+                                    <div class="mt-2">
+                                        <div class="password-strength-bar strength-weak" id="passwordStrengthBar"></div>
+                                        <p class="text-xs mt-1 text-[#618961] dark:text-green-200" id="passwordStrengthText">Password strength: Weak</p>
+                                    </div>
+                                </label>
+                                
+                                <!-- Confirm Password Field -->
+                                <label class="flex flex-col w-full">
+                                    <p class="text-[#111811] dark:text-white text-base font-medium leading-normal pb-2">Confirm Password</p>
+                                    <div class="flex w-full flex-1 items-stretch">
+                                        <input id="confirmPassword" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 focus:border-primary dark:focus:border-primary h-14 placeholder:text-[#618961] dark:placeholder:text-green-300/50 p-[15px] rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" placeholder="Confirm your password" type="password" required/>
+                                        <button type="button" class="password-toggle text-[#618961] dark:text-green-200 flex border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 items-center justify-center px-4 rounded-r-lg border-l-0 hover:bg-slate-50 dark:hover:bg-green-900/40">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs mt-1 text-red-500 hidden" id="passwordMatchError">Passwords do not match</p>
+                                </label>
+                                
+                                <!-- CTA Button -->
+                                <button type="submit" class="flex items-center justify-center whitespace-nowrap h-14 px-4 rounded-lg w-full bg-primary text-white text-base font-bold leading-normal tracking-wide shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors">
+                                    <span id="signupButtonText">Sign Up</span>
+                                    <span id="signupSpinner" class="hidden ml-2">
+                                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </form>
+                        </div>
+                    </main>
+                    
+                    <!-- Forgot Password Page -->
+                    <main id="forgotPasswordPage" class="hidden grid grid-cols-1 md:grid-cols-2 bg-white dark:bg-[#183118] md:shadow-2xl md:shadow-slate-300/10 dark:md:shadow-black/20 md:rounded-xl overflow-hidden min-h-[80vh]">
+                        <!-- Left Column: Image -->
+                        <div class="hidden md:flex flex-col">
+                            <div class="w-full h-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden" data-alt="A vibrant arrangement of fresh fruits and vegetables, including oranges, tomatoes, and leafy greens." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAVSZyeV-NpjjUs9glm_VQlKEKdcgMSOAWZhZJSYVVGmDN3kMzdtPR-qSB8GpFmo5CWLs9DgV3Trb6EcQjT1ftHINRWLhaNIIYwG1d5X5Rr08qc0_UOUMHdGPt4DU7aMwx9cSo8WSTPjh34rgK3ef1RZVBhaGHHxVKz3zD-os8y4k31iFTBMTeSt2A9wE0IrtT1jcPnI0ZFPmb25mESPMu70A4vTZZ6dHAL6-t1N-gJqmpP63pW353njN6-P4bvgGdjBWuraoMFhT8P");'></div>
+                        </div>
+                        
+                        <!-- Right Column: Form -->
+                        <div class="flex flex-col justify-center px-6 sm:px-10 md:px-12 py-10">
+                            <!-- Back Button -->
+                            <button id="backToAuth" class="flex items-center gap-2 text-primary mb-6 hover:underline">
+                                <span class="material-symbols-outlined">arrow_back</span>
+                                Back to Login
+                            </button>
+                            
+                            <!-- Header -->
+                            <div class="flex items-center gap-3 mb-4">
+                                <h1 class="text-2xl font-bold text-[#111811] dark:text-white">Grocery Go</h1>
+                            </div>
+                            
+                            <!-- Page Heading -->
+                            <div class="flex min-w-72 flex-col gap-1 mb-6">
+                                <p class="text-[#111811] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Reset Password</p>
+                                <p class="text-[#618961] dark:text-green-200 text-base font-normal leading-normal">Enter your email to receive a password reset link</p>
+                            </div>
+                            
+                            <!-- Forgot Password Form -->
+                            <form id="forgotPasswordForm" class="flex flex-col gap-5">
+                                <!-- Email Field -->
+                                <label class="flex flex-col w-full">
+                                    <p class="text-[#111811] dark:text-white text-base font-medium leading-normal pb-2">Email Address</p>
+                                    <input id="forgotPasswordEmail" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#dbe6db] dark:border-green-800 bg-white dark:bg-green-900/20 focus:border-primary dark:focus:border-primary h-14 placeholder:text-[#618961] dark:placeholder:text-green-300/50 p-[15px] text-base font-normal leading-normal" placeholder="Enter your email" type="email" required/>
+                                </label>
+                                
+                                <!-- CTA Button -->
+                                <button type="submit" class="flex items-center justify-center whitespace-nowrap h-14 px-4 rounded-lg w-full bg-primary text-white text-base font-bold leading-normal tracking-wide shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors">
+                                    <span id="forgotPasswordButtonText">Send Reset Link</span>
+                                    <span id="forgotPasswordSpinner" class="hidden ml-2">
+                                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </form>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // DOM Elements
+    const authPage = document.getElementById('authPage');
+    const forgotPasswordPage = document.getElementById('forgotPasswordPage');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+    const authToggle = document.querySelectorAll('input[name="auth-toggle"]');
+    const passwordToggles = document.querySelectorAll('.password-toggle');
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    const backToAuth = document.getElementById('backToAuth');
+    
+    // Alert system
+    function showAlert(message, type = 'success') {
+        const alertContainer = document.getElementById('alertContainer');
+        const alertId = 'alert-' + Date.now();
+        
+        const alert = document.createElement('div');
+        alert.id = alertId;
+        alert.className = `p-4 rounded-lg border shadow-sm mb-2 ${
+            type === 'success' ? 'alert-success' : 'alert-error'
+        }`;
+        alert.innerHTML = `
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-medium">${message}</p>
+                <button onclick="document.getElementById('${alertId}').remove()" class="ml-4 text-lg">&times;</button>
+            </div>
+        `;
+        
+        alertContainer.appendChild(alert);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (document.getElementById(alertId)) {
+                document.getElementById(alertId).remove();
+            }
+        }, 5000);
+    }
+    
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial page states
+        authPage.classList.remove('hidden');
+        forgotPasswordPage.classList.add('hidden');
+        showLoginForm();
+        
+        // Check for email verification success
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('emailVerified') === 'true') {
+            showAlert('Email verified successfully! You can now log in.', 'success');
+        }
+    });
+    
+    // Auth toggle functionality
+    authToggle.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'login') {
+                showLoginForm();
+            } else {
+                showSignupForm();
+            }
+        });
+    });
+    
+    function showLoginForm() {
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        document.getElementById('authTitle').textContent = 'Welcome Back!';
+        document.getElementById('authSubtitle').textContent = 'Log in to start your shopping';
+        document.getElementById('loginButtonText').textContent = 'Log In';
+    }
+    
+    function showSignupForm() {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        document.getElementById('authTitle').textContent = 'Create Account';
+        document.getElementById('authSubtitle').textContent = 'Sign up to start your shopping journey';
+        document.getElementById('signupButtonText').textContent = 'Sign Up';
+    }
+    
+    // Password toggle functionality
+    passwordToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const input = this.parentElement.querySelector('input');
+            const icon = this.querySelector('.material-symbols-outlined');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        });
+    });
+    
+    // Password strength checker
+    document.getElementById('signupPassword').addEventListener('input', function() {
+        checkPasswordStrength(this.value);
+    });
+    
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (password.length >= 12) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+        
+        const bar = document.getElementById('passwordStrengthBar');
+        const text = document.getElementById('passwordStrengthText');
+        
+        if (password.length === 0) {
+            bar.className = 'password-strength-bar strength-weak';
+            text.textContent = 'Password strength: Weak';
+        } else if (strength <= 2) {
+            bar.className = 'password-strength-bar strength-weak';
+            text.textContent = 'Password strength: Weak';
+        } else if (strength <= 4) {
+            bar.className = 'password-strength-bar strength-fair';
+            text.textContent = 'Password strength: Fair';
+        } else if (strength <= 5) {
+            bar.className = 'password-strength-bar strength-good';
+            text.textContent = 'Password strength: Good';
+        } else {
+            bar.className = 'password-strength-bar strength-strong';
+            text.textContent = 'Password strength: Strong';
+        }
+    }
+    
+    // Password match checker
+    document.getElementById('confirmPassword').addEventListener('input', function() {
+        const password = document.getElementById('signupPassword').value;
+        const confirmPassword = this.value;
+        const error = document.getElementById('passwordMatchError');
+        
+        if (confirmPassword && password !== confirmPassword) {
+            error.classList.remove('hidden');
+        } else {
+            error.classList.add('hidden');
+        }
+    });
+    
+    // Page navigation
+    forgotPasswordLink.addEventListener('click', function() {
+        authPage.classList.add('hidden');
+        forgotPasswordPage.classList.remove('hidden');
+    });
+    
+    backToAuth.addEventListener('click', function() {
+        forgotPasswordPage.classList.add('hidden');
+        authPage.classList.remove('hidden');
+        showLoginForm();
+    });
+    
+    // Login functionality with email verification check
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const buttonText = document.getElementById('loginButtonText');
+        const spinner = document.getElementById('loginSpinner');
+        
+        buttonText.textContent = 'Logging in...';
+        spinner.classList.remove('hidden');
+        
+        try {
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            
+            // Check if email is verified
+            if (!user.emailVerified) {
+                // Ask user if they want to resend verification email
+                const resend = confirm('Your email is not verified. Would you like us to send another verification email?');
+                
+                if (resend) {
+                    await user.sendEmailVerification({
+                        url: window.location.origin,
+                        handleCodeInApp: true
+                    });
+                    showAlert('Verification email sent! Please check your inbox and verify your email before logging in.', 'success');
+                }
+                
+                // Sign them out so they can't proceed without verification
+                await auth.signOut();
+                return;
+            }
+            
+            // Update last login timestamp in Firestore
+            try {
+                await db.collection('users').doc(user.uid).update({
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                    emailVerified: true
+                });
+            } catch (error) {
+                console.log('User document update error:', error);
+            }
+            
+            // Success - redirect to profile
+            buttonText.textContent = 'Success! Redirecting...';
+            showAlert('Login successful! Redirecting...', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'profile.html';
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            let errorMessage = 'Login failed. Please try again.';
+            
+            // User-friendly error messages
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    errorMessage = 'No account found with this email. Please sign up first.';
+                    break;
+                case 'auth/wrong-password':
+                    errorMessage = 'Incorrect password. Please try again.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/user-disabled':
+                    errorMessage = 'This account has been disabled. Please contact support.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many failed login attempts. Please try again later.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                    break;
+            }
+            
+            showAlert(errorMessage, 'error');
+        } finally {
+            buttonText.textContent = 'Log In';
+            spinner.classList.add('hidden');
+        }
+    });
+    
+    // Signup functionality with Firebase email verification
+    signupForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const buttonText = document.getElementById('signupButtonText');
+        const spinner = document.getElementById('signupSpinner');
+        
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            showAlert('Passwords do not match!', 'error');
+            return;
+        }
+        
+        buttonText.textContent = 'Creating Account...';
+        spinner.classList.remove('hidden');
+        
+        try {
+            // Create user with Firebase Auth
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            
+            // Send email verification
+            await user.sendEmailVerification({
+                url: window.location.origin,
+                handleCodeInApp: true
+            });
+            
+            // Create user document in Firestore
+            await db.collection('users').doc(user.uid).set({
+                email: email,
+                displayName: '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                emailVerified: false,
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Show success message with verification info
+            showAlert('Account created successfully! Please check your email to verify your account before logging in.', 'success');
+            
+            // Switch back to login form after delay
+            setTimeout(() => {
+                showLoginForm();
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('signupForm').reset();
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Signup error:', error);
+            let errorMessage = 'An error occurred during signup.';
+            
+            // User-friendly error messages
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = 'This email is already registered. Please try logging in.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'Password is too weak. Please choose a stronger password.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                    break;
+                case 'auth/operation-not-allowed':
+                    errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+                    break;
+            }
+            
+            showAlert(errorMessage, 'error');
+        } finally {
+            buttonText.textContent = 'Sign Up';
+            spinner.classList.add('hidden');
+        }
+    });
+    
+    // Forgot password functionality with Firebase
+    forgotPasswordForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('forgotPasswordEmail').value;
+        const buttonText = document.getElementById('forgotPasswordButtonText');
+        const spinner = document.getElementById('forgotPasswordSpinner');
+        
+        buttonText.textContent = 'Sending...';
+        spinner.classList.remove('hidden');
+        
+        try {
+            // Firebase will send the password reset email
+            await auth.sendPasswordResetEmail(email, {
+                url: window.location.origin + '/authpages.html',
+                handleCodeInApp: false
+            });
+            
+            // Show success message
+            showAlert('Password reset email sent! Please check your inbox and follow the instructions to reset your password.', 'success');
+            
+            // Clear form and switch back to login
+            document.getElementById('forgotPasswordForm').reset();
+            
+            setTimeout(() => {
+                forgotPasswordPage.classList.add('hidden');
+                authPage.classList.remove('hidden');
+                showLoginForm();
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Password reset error:', error);
+            let errorMessage = 'Failed to send reset email. Please try again.';
+            
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    errorMessage = 'No account found with this email address.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                    break;
+            }
+            
+            showAlert(errorMessage, 'error');
+        } finally {
+            buttonText.textContent = 'Send Reset Link';
+            spinner.classList.add('hidden');
+        }
+    });
+</script>
+
+</body>
+</html>
